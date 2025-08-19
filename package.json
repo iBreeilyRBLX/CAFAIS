@@ -25,7 +25,7 @@
   "homepage": "https://github.com/ppauel/typescript-discord-bot#readme",
   "dependencies": {
     "@fluent/bundle": "^0.17.1",
-    "discord.js": "^14.16.2",
+    "discord.js": "^14.21.0",
     "dotenv": "^16.0.3"
   },
   "devDependencies": {
