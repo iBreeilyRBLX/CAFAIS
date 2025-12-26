@@ -32,16 +32,19 @@ class IntelligenceCollector:
     def collect(self) -> List[Dict[str, Any]]:
         """Collect data from all active sources"""
         logging.info(f"Collecting intelligence from {len(self.sources)} sources")
+        # Clear previous collection data before new cycle
+        current_data = []
         # Simulated collection - in production would interface with real sources
         for source in self.sources:
             if source['status'] == 'active':
-                self.collected_data.append({
+                current_data.append({
                     'source': source['name'],
                     'timestamp': datetime.now().isoformat(),
                     'type': source['type'],
                     'status': 'collected'
                 })
-        return self.collected_data
+        self.collected_data = current_data
+        return current_data
 
 
 class ThreatAnalyzer:
@@ -162,11 +165,16 @@ class CAFAIS:
     def _setup_logging(self):
         """Configure system logging"""
         log_level = getattr(logging, self.config.get('log_level', 'INFO'))
-        logging.basicConfig(
-            level=log_level,
-            format='%(asctime)s - CAFAIS - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
+        # Only configure if not already configured
+        if not logging.getLogger().hasHandlers():
+            logging.basicConfig(
+                level=log_level,
+                format='%(asctime)s - CAFAIS - %(levelname)s - %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
+        else:
+            # Just update the level if already configured
+            logging.getLogger().setLevel(log_level)
     
     def add_intelligence_source(self, name: str, source_type: str):
         """Add a new intelligence source"""
