@@ -1,0 +1,24 @@
+# Cascadian Armed Forces Automated Intelligence System (CAFAIS)
+# Python Requirements
+
+# Core dependencies
+python-dateutil>=2.8.2
+
+# Optional: For enhanced functionality
+# uncomment as needed for production deployment
+
+# For web interface (future enhancement)
+# flask>=2.3.0
+
+# For database support (future enhancement)
+# sqlalchemy>=2.0.0
+
+# For advanced data processing (future enhancement)
+# numpy>=1.24.0
+# pandas>=2.0.0
+
+# For encryption and security (future enhancement)
+# cryptography>=41.0.0
+
+# For monitoring and metrics (future enhancement)
+# prometheus-client>=0.17.0

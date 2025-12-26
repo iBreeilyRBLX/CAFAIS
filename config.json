@@ -1,0 +1,41 @@
+{
+  "system_name": "CAFAIS",
+  "version": "1.0.0",
+  "description": "Cascadian Armed Forces Automated Intelligence System",
+  "log_level": "INFO",
+  "auto_analyze": true,
+  "report_format": "json",
+  "intelligence_sources": {
+    "satellite": {
+      "enabled": true,
+      "priority": "high",
+      "refresh_interval": 300
+    },
+    "sensor_network": {
+      "enabled": true,
+      "priority": "high",
+      "refresh_interval": 60
+    },
+    "sigint": {
+      "enabled": true,
+      "priority": "medium",
+      "refresh_interval": 120
+    },
+    "humint": {
+      "enabled": true,
+      "priority": "medium",
+      "refresh_interval": 600
+    }
+  },
+  "threat_detection": {
+    "enabled": true,
+    "sensitivity": "medium",
+    "alert_threshold": "MEDIUM"
+  },
+  "reporting": {
+    "output_directory": "reports",
+    "format": "json",
+    "auto_generate": true,
+    "retention_days": 30
+  }
+}
