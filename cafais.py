@@ -71,7 +71,8 @@ class ThreatAnalyzer:
             }
             threats.append(threat)
         
-        self.detected_threats.extend(threats)
+        # Update detected threats with current cycle only
+        self.detected_threats = threats
         logging.info(f"Identified {len(threats)} potential threats")
         return threats
 
@@ -116,7 +117,7 @@ class ReportGenerator:
         counts = {'LOW': 0, 'MEDIUM': 0, 'HIGH': 0, 'CRITICAL': 0}
         for threat in threats:
             level = threat.get('level', 'LOW')
-            counts[level] = counts.get(level, 0) + 1
+            counts[level] += 1
         return counts
     
     def print_summary(self, report_path: str):

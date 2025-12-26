@@ -22,7 +22,7 @@ CAFAIS is an automated intelligence gathering, analysis, and reporting system de
 ## Installation
 
 ### Prerequisites
-- Python 3.7 or higher
+- Python 3.8 or higher
 
 ### Setup
 
