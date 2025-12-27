@@ -126,8 +126,6 @@ const guildId = client.config.guild;
 ```
 However, the `ExtendedClient` cannot be accessed through an API object such as message or an interaction. The included handlers pass the `_client` as its own parameter, so you don't have to worry about that.
 
-### Localizations
-By default, this project supports translations. These are managed in the `lang/` folder. The configuration is located in `src/features/i18n.ts`. Examples of usage can be found in the demo files.
 
 ## About this template
 This template is still under development and will be constantly extended, for example when changes are made to the Discord API.

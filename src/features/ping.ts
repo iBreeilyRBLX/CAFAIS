@@ -1,10 +1,9 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Locale, MessageActionRowComponentBuilder } from 'discord.js';
-import i18n from './i18n';
-// Example button (related to the /ping command)
-export function getPingButton(locale:Locale) {
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageActionRowComponentBuilder } from 'discord.js';
+// Example button (localization removed)
+export function getPingButton() {
     const pingButton = new ButtonBuilder()
         .setCustomId('ping')
-        .setLabel(i18n(locale, 'ping-button'))
+        .setLabel('Ping')
         .setStyle(ButtonStyle.Primary)
         .setDisabled(false)
         .setEmoji('🏓');

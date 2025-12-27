@@ -4,7 +4,6 @@ import ExtendedShardingManager from './classes/ShardingManager';
 
 config();
 
-import './features/i18n';
 
 // TypeScript or JavaScript environment (thanks to https://github.com/stijnvdkolk)
 let tsNodeRun = false;

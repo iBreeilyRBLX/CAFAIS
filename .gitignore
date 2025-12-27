@@ -46,3 +46,7 @@ dist/
 
 # MacOS
 .DS_Store
+
+# github
+github/
+lang/

@@ -1,20 +1,16 @@
-import { Locale, PermissionsBitField, SlashCommandBuilder } from 'discord.js';
-import { getPingButton } from '../../features/ping';
-import i18n, { localization } from '../../features/i18n';
+import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
 import { ChatInputCommand } from '../../interfaces';
 
-// Example slash command
+// Example slash command (localization removed)
 const command: ChatInputCommand = {
     options: new SlashCommandBuilder()
-        .setName(i18n(Locale.EnglishUS, 'ping-name'))
-        .setNameLocalizations(localization('ping-name'))
-        .setDescription(i18n(Locale.EnglishUS, 'ping-description'))
-        .setDescriptionLocalizations(localization('ping-description'))
+        .setName('ping')
+        .setDescription('Replies with Pong!')
         .setDMPermission(true)
         .setDefaultMemberPermissions(PermissionsBitField.Flags.SendMessages),
     global: true,
     execute: async (_client, interaction) => {
-        interaction.reply({ content: ` ${i18n(interaction.locale, 'ping-reply')} 🏓`, components: [getPingButton(interaction.locale)], ephemeral: true });
+        interaction.reply({ content: 'Pong! 🏓', ephemeral: true });
     },
 };
 export default command;

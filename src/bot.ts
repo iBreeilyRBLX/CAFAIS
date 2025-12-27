@@ -4,21 +4,38 @@ import { config } from 'dotenv';
 
 // Load .env file contents
 config();
-import './features/i18n';
 
 // Initialization (specify intents and partials)
 new ExtendedClient({
     intents: [
         Intents.Guilds,
-        Intents.GuildMessages,
-        Intents.MessageContent,
         Intents.GuildMembers,
+        Intents.GuildBans,
+        Intents.GuildEmojisAndStickers,
+        Intents.GuildIntegrations,
+        Intents.GuildWebhooks,
+        Intents.GuildInvites,
+        Intents.GuildVoiceStates,
+        Intents.GuildPresences,
+        Intents.GuildMessages,
+        Intents.GuildMessageReactions,
+        Intents.GuildMessageTyping,
+        Intents.DirectMessages,
+        Intents.DirectMessageReactions,
+        Intents.DirectMessageTyping,
+        Intents.MessageContent,
+        Intents.GuildScheduledEvents,
+        Intents.AutoModerationConfiguration,
+        Intents.AutoModerationExecution,
     ],
     partials: [
-        Partials.Message,
+        Partials.User,
         Partials.Channel,
-        Partials.Reaction,
         Partials.GuildMember,
+        Partials.Message,
+        Partials.Reaction,
+        Partials.ThreadMember,
+        Partials.GuildScheduledEvent,
     ],
 }).login(process.env.TOKEN)
     .catch((err:unknown) => {

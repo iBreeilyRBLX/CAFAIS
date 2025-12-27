@@ -1,5 +1,5 @@
 {
-    "guild": "your_guild_id",
+    "guild": "1454227367672283253",
     "interactions": {
         "receiveMessageComponents": true,
         "receiveModals": true,
