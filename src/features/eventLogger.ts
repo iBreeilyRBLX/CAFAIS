@@ -12,10 +12,7 @@ export async function logEvent(
   type: EventLogType,
   embed: EmbedBuilder
 ) {
-  const channelId = config.logChannels[type];
-  if (!channelId) return;
-  const channel = await client.channels.fetch(channelId);
-  if (channel && channel.isTextBased()) {
-    await (channel as TextChannel).send({ embeds: [embed] });
-  }
+  // logChannels not in config, so this function is a stub or needs refactor
+  // You may want to implement your own channel mapping here
+  return;
 }

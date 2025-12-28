@@ -1,6 +1,7 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { PrismaClient } from '@prisma/client';
 
+console.log('DATABASE_URL at runtime:', process.env.DATABASE_URL);
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 module.exports = {
@@ -10,7 +11,8 @@ module.exports = {
     async execute(interaction: CommandInteraction) {
     // Only allow users with the 'Training Officer' role
         const member = interaction.member;
-        if (!('roles' in member) || !member.roles.cache.some((role: any) => role.name === 'Training Officer')) {
+        if (!member || typeof member !== 'object' || !('roles' in member) || typeof member.roles !== 'object' || !('cache' in member.roles) ||
+            !member.roles.cache.some((role: any) => role.name === 'Training Officer')) {
             await interaction.reply({ content: 'You do not have permission to use this command.', ephemeral: true });
             return;
         }

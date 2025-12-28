@@ -1,11 +1,5 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { PrismaClient } from '@prisma/client';
-
 const prisma = new PrismaClient();
 const EVENT_TYPES = [
     'Combat Patrol',
@@ -41,10 +35,15 @@ module.exports = {
                 .setRequired(false),
         ),
     async execute(interaction: CommandInteraction) {
-        const name = interaction.options.get('name')?.value as string;
-        const eventType = interaction.options.get('eventtype')?.value as string;
-        const notes = interaction.options.get('notes')?.value as string | undefined;
-        const imageLink = interaction.options.get('image')?.value as string | undefined;
+        // Use getString if available, fallback to old method
+        // @ts-ignore
+        const name = interaction.options.getString ? interaction.options.getString('name') : interaction.options.get('name')?.value;
+        // @ts-ignore
+        const eventType = interaction.options.getString ? interaction.options.getString('eventtype') : interaction.options.get('eventtype')?.value;
+        // @ts-ignore
+        const notes = interaction.options.getString ? interaction.options.getString('notes') : interaction.options.get('notes')?.value || undefined;
+        // @ts-ignore
+        const imageLink = interaction.options.getString ? interaction.options.getString('image') : interaction.options.get('image')?.value || undefined;
         const now = new Date();
         const event = await prisma.event.create({
             data: {

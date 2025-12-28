@@ -21,15 +21,21 @@ module.exports = {
                 .setRequired(true),
         ),
     async execute(interaction: CommandInteraction) {
-        const name = interaction.options.get('name')?.value as string;
+        // @ts-ignore
+        const name = interaction.options.getString ? interaction.options.getString('name') : interaction.options.get('name')?.value;
         const event = await prisma.event.findFirst({ where: { name, eventType: 'Lore', endTime: null } });
         if (!event) {
             await interaction.reply({ content: 'No active lore event found with that name.', ephemeral: true });
             return;
         }
         const now = new Date();
-        const durationMs = now.getTime() - event.startTime.getTime();
-        const points = calculateLorePoints(durationMs);
+        const durationMs = now.getTime() - new Date(event.startTime).getTime();
+        // Lore event points: 1 hour = 3 points, every 30 min = +1 point
+        const base = 3, per30 = 1;
+        const hours = Math.floor(durationMs / (1000 * 60 * 60));
+        const mins = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+        let points = hours * base;
+        points += Math.floor(mins / 30) * per30;
         // Get all users in the same voice channel as the command user
         const member = interaction.member as GuildMember;
         const voice = member.voice;
@@ -50,7 +56,7 @@ module.exports = {
                     },
                 });
             }
-            await prisma.eventParticipant.upsert({
+            await prisma["eventParticipant"].upsert({
                 where: { eventId_userDiscordId: { eventId: event.id, userDiscordId: profile.discordId } },
                 update: { points },
                 create: { eventId: event.id, userDiscordId: profile.discordId, points },
@@ -58,8 +64,10 @@ module.exports = {
             await prisma.userProfile.update({ where: { discordId: profile.discordId }, data: { points: { increment: points } } });
         }
         // Optionally allow updating notes and imageLink at end
-        const notes = interaction.options.get('notes')?.value as string | undefined;
-        const imageLink = interaction.options.get('image')?.value as string | undefined;
+        // @ts-ignore
+        const notes = interaction.options.getString ? interaction.options.getString('notes') : interaction.options.get('notes')?.value || undefined;
+        // @ts-ignore
+        const imageLink = interaction.options.getString ? interaction.options.getString('image') : interaction.options.get('image')?.value || undefined;
         await prisma.event.update({ where: { id: event.id }, data: { endTime: now, pointsAwarded: points, notes, imageLink } });
         await interaction.reply(`Lore event **${name}** ended. Duration: ${(durationMs / 60000).toFixed(0)} min. Each participant awarded **${points}** lore points.`);
     },

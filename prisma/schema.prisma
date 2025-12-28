@@ -5,6 +5,25 @@ model TrainingEventLog {
   createdAt   DateTime @default(now())
   event       Event    @relation(fields: [eventId], references: [id])
 }
+
+model VerifiedUser {
+  discordId         String   @id
+  robloxId          BigInt
+  robloxUsername    String
+  robloxDisplayName String
+  verifiedAt        DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userProfile       UserProfile @relation(fields: [discordId], references: [discordId])
+}
+
+model OauthState {
+  id             String   @id @default(uuid())
+  stateToken     String   @unique
+  discordId      String
+  discordUserTag String?
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime @default(dbgenerated("now() + interval '10 minutes'"))
+}
 // Prisma schema for Discord bot (PostgreSQL)
 // Models: UserProfile, Event, EventAttendance, LOA, RankCooldown, RankLock, Award
 // Follows best practices for relations and indexing
@@ -22,9 +41,6 @@ model UserProfile {
   username     String
   discriminator String
   points       Int      @default(0)
-  robloxUserId String?
-  robloxUsername String?
-  robloxDisplayName String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   events       EventAttendance[]
@@ -33,6 +49,7 @@ model UserProfile {
   rankCooldowns RankCooldown[]
   rankLocks    RankLock[]
   awards       Award[]
+  verifiedUser VerifiedUser?
 }
 
 model Event {

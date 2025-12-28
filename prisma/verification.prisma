@@ -1,0 +1,17 @@
+model VerifiedUser {
+  discordId         String   @id
+  robloxId          BigInt
+  robloxUsername    String
+  robloxDisplayName String
+  verifiedAt        DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model OauthState {
+  id             String   @id @default(uuid())
+  stateToken     String   @unique
+  discordId      String
+  discordUserTag String?
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime @default(dbgenerated("now() + interval '10 minutes'"))
+}

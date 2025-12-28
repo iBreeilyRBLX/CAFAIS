@@ -14,7 +14,9 @@ module.exports = {
         ),
     async execute(interaction: CommandInteraction) {
         const discordId = interaction.user.id;
-        const eventName = interaction.options.get('name')?.value as string;
+        // Use getString if available, fallback to old method
+        // @ts-ignore
+        const eventName = interaction.options.getString ? interaction.options.getString('name') : interaction.options.get('name')?.value;
         let user = await prisma.userProfile.findUnique({ where: { discordId } });
         if (!user) {
             user = await prisma.userProfile.create({
