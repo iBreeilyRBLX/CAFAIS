@@ -1,0 +1,127 @@
+model TrainingEventLog {
+  id          String   @id @default(uuid())
+  eventId     String
+  report      String
+  createdAt   DateTime @default(now())
+  event       Event    @relation(fields: [eventId], references: [id])
+}
+// Prisma schema for Discord bot (PostgreSQL)
+// Models: UserProfile, Event, EventAttendance, LOA, RankCooldown, RankLock, Award
+// Follows best practices for relations and indexing
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model UserProfile {
+  discordId    String   @id
+  username     String
+  discriminator String
+  points       Int      @default(0)
+  robloxUserId String?
+  robloxUsername String?
+  robloxDisplayName String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  events       EventAttendance[]
+  eventParticipants EventParticipant[]
+  loaRecords   LOA[]
+  rankCooldowns RankCooldown[]
+  rankLocks    RankLock[]
+  awards       Award[]
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  eventType   String
+  eventHostDiscordId String
+  notes       String?
+  imageLink   String?
+  startTime   DateTime
+  endTime     DateTime?
+  pointsAwarded Int?
+  attendances EventAttendance[]
+  participants EventParticipant[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trainingEventLogs TrainingEventLog[]
+  @@index([startTime])
+  @@index([eventType])
+}
+
+model EventParticipant {
+  id         String      @id @default(uuid())
+  eventId    String
+  userDiscordId String
+  points     Int         @default(0)
+  event      Event       @relation(fields: [eventId], references: [id])
+  user       UserProfile @relation(fields: [userDiscordId], references: [discordId])
+  @@unique([eventId, userDiscordId])
+  @@index([eventId])
+  @@index([userDiscordId])
+}
+
+model EventAttendance {
+  id         String   @id @default(uuid())
+  userDiscordId String
+  eventId    String
+  attendedAt DateTime    @default(now())
+  user       UserProfile @relation(fields: [userDiscordId], references: [discordId])
+  event      Event       @relation(fields: [eventId], references: [id])
+  @@unique([userDiscordId, eventId])
+  @@index([userDiscordId])
+  @@index([eventId])
+}
+
+model LOA {
+  id         String      @id @default(uuid())
+  userDiscordId String
+  reason     String
+  startDate  DateTime
+  endDate    DateTime
+  createdAt  DateTime    @default(now())
+  user       UserProfile @relation(fields: [userDiscordId], references: [discordId])
+  @@index([userDiscordId])
+  @@index([endDate])
+}
+
+model RankCooldown {
+  id         String      @id @default(uuid())
+  userDiscordId String
+  rank       String
+  cooldownUntil DateTime
+  createdAt  DateTime    @default(now())
+  user       UserProfile @relation(fields: [userDiscordId], references: [discordId])
+  @@unique([userDiscordId, rank])
+  @@index([userDiscordId])
+  @@index([rank])
+}
+
+model RankLock {
+  id         String      @id @default(uuid())
+  userDiscordId String
+  rank       String
+  lockedAt   DateTime    @default(now())
+  reason     String?
+  user       UserProfile @relation(fields: [userDiscordId], references: [discordId])
+  @@unique([userDiscordId, rank])
+  @@index([userDiscordId])
+  @@index([rank])
+}
+
+model Award {
+  id         String      @id @default(uuid())
+  userDiscordId String
+  name       String
+  description String?
+  awardedAt  DateTime    @default(now())
+  user       UserProfile @relation(fields: [userDiscordId], references: [discordId])
+  @@index([userDiscordId])
+  @@index([name])
+}

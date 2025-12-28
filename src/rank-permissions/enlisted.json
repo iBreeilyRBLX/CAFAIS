@@ -1,0 +1,4 @@
+{
+  "type": ".INCLUDE",
+  "commands": ["help", "profile"]
+}
