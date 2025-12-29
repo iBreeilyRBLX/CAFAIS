@@ -12,7 +12,7 @@ const event: Event = {
             await client.deploy();
 
             // Skip if no-deployment flag is set, else deploys commands
-            if (!process.argv.includes('--no-deployment')) await client.deploy();
+            // if (!process.argv.includes('--no-deployment')) await client.deploy();
             console.log(`\nReady! Logged in as ${client.user?.tag} (${client.user?.id})\n`);
 
             const messageManager = new MessageManager(client);

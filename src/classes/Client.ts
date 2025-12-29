@@ -121,27 +121,46 @@ export default class ExtendedClient extends Client {
         // Modal Handler
         this.modals = fileToCollection<ModalSubmit>(modalPath);
 
-        // Event Handler
-        readdirSync(eventPath)
-            .filter((dir) => dir.endsWith(tsNodeRun ? '.ts' : '.js'))
-            .forEach((file) =>
-                import(path.join(eventPath, file)).then(
-                    (event: { default: Event }) => {
-                        this.events.set(event.default.name, event.default);
+        // Event Handler - Recursive version
+        // eslint-disable-next-line no-shadow
+        const loadEventsRecursively = (eventPath: string) => {
+            const dirents = readdirSync(eventPath, { withFileTypes: true });
 
-                        if (event.default.once) {
-                            this.once(event.default.name, (...args) =>
-                                event.default.execute(this, ...args),
-                            );
-                        }
-                        else {
-                            this.on(event.default.name, (...args) =>
-                                event.default.execute(this, ...args),
-                            );
-                        }
-                    },
-                ),
-            );
+            // Process files in current directory
+            dirents
+                .filter((dirent) =>
+                    !dirent.isDirectory() &&
+                    dirent.name.endsWith(tsNodeRun ? '.ts' : '.js') &&
+                    !dirent.name.startsWith('_'),
+                )
+                .forEach((file) =>
+                    import(path.join(eventPath, file.name)).then(
+                        (event: { default: Event }) => {
+                            this.events.set(event.default.name, event.default);
+
+                            if (event.default.once) {
+                                this.once(event.default.name, (...args) =>
+                                    event.default.execute(this, ...args),
+                                );
+                            }
+                            else {
+                                this.on(event.default.name, (...args) =>
+                                    event.default.execute(this, ...args),
+                                );
+                            }
+                        },
+                    ),
+                );
+
+            // Process subdirectories recursively
+            dirents
+                .filter((dirent) => dirent.isDirectory())
+                .forEach((dir) => {
+                    loadEventsRecursively(path.join(eventPath, dir.name));
+                });
+        };
+
+        loadEventsRecursively(eventPath);
     }
     /**
      * Deploy Application Commands to Discord

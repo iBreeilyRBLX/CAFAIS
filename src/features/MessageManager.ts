@@ -70,7 +70,7 @@ export class MessageManager {
             // Create new webhook with the name of the first message in this channel
             const webhook = await channel.createWebhook({
                 name: webhookName,
-                avatar: 'https://cdn.discordapp.com/emojis/995530567355469835.png',
+                // avatar: '',
             });
 
             if (!webhook.token) {

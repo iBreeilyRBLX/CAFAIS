@@ -8,11 +8,11 @@ export enum EventLogType {
 }
 
 export async function logEvent(
-  client: Client,
-  type: EventLogType,
-  embed: EmbedBuilder
+    client: Client,
+    type: EventLogType,
+    embed: EmbedBuilder,
 ) {
-  // logChannels not in config, so this function is a stub or needs refactor
-  // You may want to implement your own channel mapping here
-  return;
+    // logChannels not in config, so this function is a stub or needs refactor
+    // You may want to implement your own channel mapping here
+    return;
 }
