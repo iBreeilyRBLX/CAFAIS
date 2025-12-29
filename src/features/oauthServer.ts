@@ -278,7 +278,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                     // Grant verification roles (always attempt regardless of nickname result)
                     try {
                         const VERIFIED_ROLE = process.env.VERIFIED_ROLE_ID || '1454961614284656894';
-                        const UNRANKED_ROLE = process.env.UNRANKED_ROLE_ID || '1013386604246745098';
+                        const UNRANKED_ROLE = process.env.UNRANKED_ROLE_ID || '1454532106565845064';
                         const UNVERIFIED_ROLE = process.env.UNVERIFIED_ROLE_ID || '1454581366233628733';
 
                         // Add verified role to everyone
