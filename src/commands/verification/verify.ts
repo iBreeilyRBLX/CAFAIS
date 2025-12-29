@@ -1,9 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { BaseCommand } from '../../classes/BaseCommand';
 import ExtendedClient from '../../classes/Client';
-
 import robloxVerificationService from '../../features/robloxVerificationService';
-import { ranks } from '../../ranks/ranks';
 
 
 class VerifyCommand extends BaseCommand {
@@ -23,6 +21,8 @@ class VerifyCommand extends BaseCommand {
             await this.updateUserVerification(client, interaction, commandUserId);
         }
         catch (error) {
+            // Log the error for debugging
+            console.error('Error in /verify command:', error);
             const container = new ContainerBuilder();
             const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nAn error occurred. Please try again.');
             container.addTextDisplayComponents(content);
@@ -34,6 +34,20 @@ class VerifyCommand extends BaseCommand {
     }
 
     private async updateUserVerification(client: ExtendedClient, interaction: ChatInputCommandInteraction, userId: string): Promise<void> {
+        // Ensure user profile exists in DB
+        const user = await interaction.client.users.fetch(userId);
+        const userProfile = await import('../../database/prisma');
+        const prisma = userProfile.default;
+        await prisma.userProfile.upsert({
+            where: { discordId: userId },
+            update: {},
+            create: {
+                discordId: userId,
+                username: user.username,
+                discriminator: user.discriminator ?? '0000',
+            },
+        });
+
         const isVerified = await robloxVerificationService.isVerified(userId);
         if (isVerified) {
             const member = await interaction.guild?.members.fetch(userId);
@@ -58,6 +72,15 @@ class VerifyCommand extends BaseCommand {
                 });
                 return;
             }
+            // Remove unverified role if present
+            const unverifiedRoleId = process.env.UNVERIFIED_ROLE_ID;
+            if (unverifiedRoleId && member.roles.cache.has(unverifiedRoleId)) {
+                try {
+                    await member.roles.remove(unverifiedRoleId);
+                } catch (e) {
+                    // ignore role errors
+                }
+            }
             const newNickname = robloxUser.displayName;
             if (newNickname.length > 32) {
                 const container = new ContainerBuilder();
@@ -71,33 +94,8 @@ class VerifyCommand extends BaseCommand {
             }
             try {
                 await member.setNickname(newNickname);
-            }
-            catch (e) {
+            } catch (e) {
                 // ignore nickname errors
-            }
-            // Add verified role and remove unverified role, and add Initiate if no rank
-            const verifiedRoleId = process.env.VERIFIED_ROLE_ID || '1454533624379605096'; // fallback to provided ID
-            const unverifiedRoleId = process.env.UNVERIFIED_ROLE_ID;
-            const initiateRoleId = ranks.find(r => r.name === 'Initiate')?.discordRoleId;
-            // All rank role IDs except Initiate
-            const rankRoleIds = ranks.filter(r => r.name !== 'Initiate').map(r => r.discordRoleId);
-            try {
-                // Remove unverified role if present
-                if (unverifiedRoleId && member.roles.cache.has(unverifiedRoleId)) {
-                    await member.roles.remove(unverifiedRoleId);
-                }
-                // Add verified role if not present
-                if (verifiedRoleId && !member.roles.cache.has(verifiedRoleId)) {
-                    await member.roles.add(verifiedRoleId);
-                }
-                // Only give Initiate role if user has no rank roles (excluding Initiate)
-                const hasRank = ranks.some(rank => rank.name !== 'Initiate' && member.roles.cache.has(rank.discordRoleId));
-                if (!hasRank && initiateRoleId && !member.roles.cache.has(initiateRoleId)) {
-                    await member.roles.add(initiateRoleId);
-                }
-            }
-            catch (e) {
-                // ignore role errors
             }
             const container = new ContainerBuilder();
             const title = new TextDisplayBuilder().setContent('# ✅ Verification Updated');
@@ -116,7 +114,7 @@ class VerifyCommand extends BaseCommand {
             return;
         }
         // Not verified - initiate OAuth flow
-        const userTag = (await interaction.client.users.fetch(userId)).tag;
+        const userTag = user.tag;
         const authData = await robloxVerificationService.generateAuthorizationUrl(userId, userTag);
         const discordOAuthUrl = robloxVerificationService.generateDiscordAuthUrl(authData.stateToken);
         const container = new ContainerBuilder();
@@ -146,4 +144,4 @@ class VerifyCommand extends BaseCommand {
     }
 }
 
-export default VerifyCommand;
+export default new VerifyCommand();

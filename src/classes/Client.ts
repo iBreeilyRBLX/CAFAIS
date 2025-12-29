@@ -4,10 +4,10 @@ import {
     Collection,
     ColorResolvable,
     Snowflake,
-} from "discord.js";
-import { readdirSync } from "fs";
-import path from "path";
-import configJSON from "../config.json";
+} from 'discord.js';
+import { readdirSync } from 'fs';
+import path from 'path';
+import configJSON from '../config.json';
 import {
     AnySelectMenu,
     Button,
@@ -17,24 +17,26 @@ import {
     Event,
     Interaction,
     ModalSubmit,
-} from "../interfaces";
+} from '../interfaces';
+import setupOAuthServer from '../features/oauthServer';
 
 // TypeScript or JavaScript environment (thanks to https://github.com/stijnvdkolk)
 let tsNodeRun = false;
 try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    if (process[Symbol.for("ts-node.register.instance")]) {
+    if (process[Symbol.for('ts-node.register.instance')]) {
         tsNodeRun = true;
     }
-} catch (e) {
+}
+catch (e) {
     /* empty */
 }
 /**
  * Type Definitions for config
  */
 interface Config {
-    guild: Snowflake | "your_guild_id";
+    guild: Snowflake | 'your_guild_id';
     interactions: {
         receiveMessageComponents: boolean;
         receiveModals: boolean;
@@ -45,7 +47,7 @@ interface Config {
     colors: {
         embed: ColorResolvable;
     };
-    restVersion: "10";
+    restVersion: '10';
 }
 /**
  * ExtendedClient is extends frome `Discord.js`'s Client
@@ -88,20 +90,20 @@ export default class ExtendedClient extends Client {
     constructor(options: ClientOptions) {
         super(options);
 
-        console.log("\nStarting up...\n");
+        console.log('\nStarting up...\n');
 
         // Paths
-        const commandPath = path.join(__dirname, "..", "commands"),
-            contextMenuPath = path.join(__dirname, "..", "context_menus"),
-            buttonPath = path.join(__dirname, "..", "interactions", "buttons"),
+        const commandPath = path.join(__dirname, '..', 'commands'),
+            contextMenuPath = path.join(__dirname, '..', 'context_menus'),
+            buttonPath = path.join(__dirname, '..', 'interactions', 'buttons'),
             selectMenuPath = path.join(
                 __dirname,
-                "..",
-                "interactions",
-                "select_menus",
+                '..',
+                'interactions',
+                'select_menus',
             ),
-            modalPath = path.join(__dirname, "..", "interactions", "modals"),
-            eventPath = path.join(__dirname, "..", "events");
+            modalPath = path.join(__dirname, '..', 'interactions', 'modals'),
+            eventPath = path.join(__dirname, '..', 'events');
 
         // Command Handler
         this.commands = fileToCollection<ChatInputCommand>(commandPath);
@@ -121,7 +123,7 @@ export default class ExtendedClient extends Client {
 
         // Event Handler
         readdirSync(eventPath)
-            .filter((dir) => dir.endsWith(tsNodeRun ? ".ts" : ".js"))
+            .filter((dir) => dir.endsWith(tsNodeRun ? '.ts' : '.js'))
             .forEach((file) =>
                 import(path.join(eventPath, file)).then(
                     (event: { default: Event }) => {
@@ -131,7 +133,8 @@ export default class ExtendedClient extends Client {
                             this.once(event.default.name, (...args) =>
                                 event.default.execute(this, ...args),
                             );
-                        } else {
+                        }
+                        else {
                             this.on(event.default.name, (...args) =>
                                 event.default.execute(this, ...args),
                             );
@@ -147,42 +150,68 @@ export default class ExtendedClient extends Client {
     public async deploy() {
         if (!this.token) {
             return console.warn(
-                "[Error] Token not present at command deployment",
+                '[Error] Token not present at command deployment',
             );
         }
 
+        // Setup OAuth server for Roblox verification
+        try {
+            setupOAuthServer(this);
+        }
+        catch (error) {
+            console.warn('Failed to setup OAuth server - Roblox verification may not be available', 'STARTUP');
+        }
+
+
         const publicChatInputCommands = Array.from(
             this.commands.filter((cmd) => cmd.global).values(),
-        ).map((m) => m.options.toJSON());
+        )
+            .filter((m) => m.options && typeof m.options.toJSON === 'function')
+            .map((m) => m.options.toJSON());
 
         const publicContextMenuCommands = Array.from(
             this.contextMenus.filter((cmd) => cmd.global).values(),
-        ).map((m) => m.options.toJSON());
+        )
+            .filter((m) => m.options && typeof m.options.toJSON === 'function')
+            .map((m) => m.options.toJSON());
+
+        // Log any commands/context menus missing options or toJSON
+        Array.from(this.commands.values())
+            .filter((m) => !m.options || typeof m.options.toJSON !== 'function')
+            .forEach((m) => console.warn('[Warning] Command missing options or toJSON:', m));
+        Array.from(this.contextMenus.values())
+            .filter((m) => !m.options || typeof m.options.toJSON !== 'function')
+            .forEach((m) => console.warn('[Warning] ContextMenu missing options or toJSON:', m));
 
         const publicCommands = [
             ...publicChatInputCommands,
             ...publicContextMenuCommands,
         ];
 
+
         const guildChatInputCommands = Array.from(
             this.commands.filter((cmd) => !cmd.global).values(),
-        ).map((m) => m.options.toJSON());
+        )
+            .filter((m) => m.options && typeof m.options.toJSON === 'function')
+            .map((m) => m.options.toJSON());
 
         const guildContextMenuCommands = Array.from(
             this.contextMenus.filter((cmd) => !cmd.global).values(),
-        ).map((m) => m.options.toJSON());
+        )
+            .filter((m) => m.options && typeof m.options.toJSON === 'function')
+            .map((m) => m.options.toJSON());
 
         const guildCommands = [
             ...guildChatInputCommands,
             ...guildContextMenuCommands,
         ];
 
-        console.log("[INFO] Deploying commands...");
+        console.log('[INFO] Deploying commands...');
 
         // Deploy global commands
         if (!this.application) {
             return console.warn(
-                "[Error] Application not present at command deployment",
+                '[Error] Application not present at command deployment',
             );
         }
 
@@ -199,7 +228,7 @@ export default class ExtendedClient extends Client {
         const guild = this.guilds.cache.get(this.config.guild);
         if (!guild) {
             return console.warn(
-                "[Warning] Please specify a guild id in order to use guild command(s)",
+                '[Warning] Please specify a guild id in order to use guild command(s)',
             );
         }
 
@@ -232,13 +261,13 @@ function fileToCollection<Type extends Command | Interaction>(
             .forEach((dir) => {
                 const directoryPath = path.join(dirPath, dir.name);
                 readdirSync(directoryPath)
-                    .filter((file) => file.endsWith(tsNodeRun ? ".ts" : ".js"))
+                    .filter((file) => file.endsWith(tsNodeRun ? '.ts' : '.js') && !file.startsWith('_'))
                     .forEach((file) => {
                         import(path.join(directoryPath, file)).then(
                             (resp: { default: Type }) => {
                                 collection.set(
                                     (resp.default as Command).options !=
-                                        undefined
+                                            undefined
                                         ? (resp.default as Command).options.name
                                         : (resp.default as Interaction).name,
                                     resp.default,
@@ -252,7 +281,8 @@ function fileToCollection<Type extends Command | Interaction>(
             .filter(
                 (dirent) =>
                     !dirent.isDirectory() &&
-                    dirent.name.endsWith(tsNodeRun ? ".ts" : ".js"),
+                    dirent.name.endsWith(tsNodeRun ? '.ts' : '.js') &&
+                    !dirent.name.startsWith('_'),
             )
             .forEach((file) => {
                 import(path.join(dirPath, file.name)).then(
@@ -266,14 +296,16 @@ function fileToCollection<Type extends Command | Interaction>(
                     },
                 );
             });
-    } catch (error) {
+    }
+    catch (error) {
         if (
             isErrnoException(error) &&
-            error.code == "ENOENT" &&
-            error.syscall == "scandir"
+            error.code == 'ENOENT' &&
+            error.syscall == 'scandir'
         ) {
             console.warn(`[Warning] Directory not found at ${error.path}`);
-        } else {
+        }
+        else {
             throw error;
         }
     }

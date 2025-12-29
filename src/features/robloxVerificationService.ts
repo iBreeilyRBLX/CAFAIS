@@ -21,6 +21,7 @@ class RobloxVerificationService {
     private readonly ROBLOX_OAUTH_BASE = 'https://apis.roblox.com/oauth/v1';
     private readonly DISCORD_OAUTH_BASE = 'https://discord.com/api/oauth2';
 
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     private constructor() {}
 
     public static getInstance(): RobloxVerificationService {
@@ -290,7 +291,8 @@ class RobloxVerificationService {
         try {
             await prisma.verifiedUser.delete({ where: { discordId } });
             return true;
-        } catch {
+        }
+        catch {
             return false;
         }
     }

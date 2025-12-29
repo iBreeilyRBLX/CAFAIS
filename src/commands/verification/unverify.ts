@@ -32,6 +32,14 @@ class UnverifyCommand extends BaseCommand {
 
             // Remove verification
             const removed = await robloxVerificationService.removeVerification(discordId);
+            const UNVERIFIED_ROLE_ID = process.env.UNVERIFIED_ROLE_ID || '1454581366233628733';
+            const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '1454961614284656894';
+            const guild = client.guilds.cache.get(process.env.GUILD_ID || '');
+            const member = guild ? await guild.members.fetch(discordId).catch(() => null) : null;
+            if (member) {
+                await member.roles.add(UNVERIFIED_ROLE_ID);
+                await member.roles.remove(VERIFIED_ROLE_ID);
+            }
             if (!removed) {
                 const container = new ContainerBuilder();
                 const content = new TextDisplayBuilder()
@@ -72,4 +80,4 @@ class UnverifyCommand extends BaseCommand {
     }
 }
 
-export default UnverifyCommand;
+export default new UnverifyCommand();

@@ -1,6 +1,8 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import prisma from '../../database/prisma';
+import { BaseCommand } from '../../classes/BaseCommand';
+import ExtendedClient from '../../classes/Client';
+
 const EVENT_TYPES = [
     'Combat Patrol',
     'Money Grinding',
@@ -9,8 +11,8 @@ const EVENT_TYPES = [
     'Other',
 ];
 
-module.exports = {
-    data: new SlashCommandBuilder()
+class StartEventCommand extends BaseCommand {
+    public options = new SlashCommandBuilder()
         .setName('start-event')
         .setDescription('Start a new event')
         .addStringOption(option =>
@@ -33,8 +35,10 @@ module.exports = {
             option.setName('image')
                 .setDescription('Image link for the event')
                 .setRequired(false),
-        ),
-    async execute(interaction: CommandInteraction) {
+        ) as SlashCommandBuilder;
+    public global = false;
+
+    protected async executeCommand(_client: ExtendedClient, interaction: ChatInputCommandInteraction): Promise<void> {
         // Use getString if available, fallback to old method
         // @ts-ignore
         const name = interaction.options.getString ? interaction.options.getString('name') : interaction.options.get('name')?.value;
@@ -45,16 +49,18 @@ module.exports = {
         // @ts-ignore
         const imageLink = interaction.options.getString ? interaction.options.getString('image') : interaction.options.get('image')?.value || undefined;
         const now = new Date();
-        const event = await prisma.event.create({
+        await prisma.event.create({
             data: {
-                name,
-                eventType,
+                name: typeof name === 'string' ? name : String(name),
+                eventType: typeof eventType === 'string' ? eventType : String(eventType),
                 eventHostDiscordId: interaction.user.id,
-                notes,
-                imageLink,
+                notes: typeof notes === 'string' ? notes : notes ? String(notes) : null,
+                imageLink: typeof imageLink === 'string' ? imageLink : imageLink ? String(imageLink) : null,
                 startTime: now,
             },
         });
-        await interaction.reply(`Event **${name}** of type **${eventType}** started at ${now.toLocaleString()}`);
-    },
-};
+        await interaction.editReply(`Event **${name}** of type **${eventType}** started at ${now.toLocaleString()}`);
+    }
+}
+
+export default new StartEventCommand();

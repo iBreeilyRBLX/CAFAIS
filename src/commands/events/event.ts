@@ -1,18 +1,21 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import prisma from '../../database/prisma';
+import { BaseCommand } from '../../classes/BaseCommand';
+import ExtendedClient from '../../classes/Client';
 
-module.exports = {
-    data: new SlashCommandBuilder()
+class EventCommand extends BaseCommand {
+    public options = new SlashCommandBuilder()
         .setName('event')
         .setDescription('Mark attendance for an event')
         .addStringOption(option =>
             option.setName('name')
                 .setDescription('Event name')
                 .setRequired(true),
-        ),
-    async execute(interaction: CommandInteraction) {
+        ) as SlashCommandBuilder;
+    public global = false;
+
+    protected async executeCommand(_client: ExtendedClient, interaction: ChatInputCommandInteraction): Promise<void> {
         const discordId = interaction.user.id;
         // Use getString if available, fallback to old method
         // @ts-ignore
@@ -27,15 +30,17 @@ module.exports = {
                 },
             });
         }
-        let event = await prisma.event.findFirst({ where: { name: eventName } });
+        let event = await prisma.event.findFirst({ where: { name: typeof eventName === 'string' ? eventName : String(eventName) } });
         if (!event) {
-            event = await prisma.event.create({ data: { name: eventName, eventType: 'Other', eventHostDiscordId: discordId, startTime: new Date() } });
+            event = await prisma.event.create({ data: { name: typeof eventName === 'string' ? eventName : String(eventName), eventType: 'Other', eventHostDiscordId: discordId, startTime: new Date() } });
         }
-        const attendance = await prisma.eventAttendance.upsert({
+        await prisma.eventAttendance.upsert({
             where: { userDiscordId_eventId: { userDiscordId: user.discordId, eventId: event.id } },
             update: { attendedAt: new Date() },
             create: { userDiscordId: user.discordId, eventId: event.id },
         });
-        await interaction.reply(`Attendance marked for event: **${eventName}**`);
-    },
-};
+        await interaction.editReply(`Attendance marked for event: **${eventName}**`);
+    }
+}
+
+export default new EventCommand();

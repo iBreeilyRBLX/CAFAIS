@@ -1,19 +1,20 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import prisma from '../../database/prisma';
+import { BaseCommand } from '../../classes/BaseCommand';
+import ExtendedClient from '../../classes/Client';
 
-console.log('DATABASE_URL at runtime:', process.env.DATABASE_URL);
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
-
-module.exports = {
-    data: new SlashCommandBuilder()
+class AcademyLogCommand extends BaseCommand {
+    public options = new SlashCommandBuilder()
         .setName('academy-log')
-        .setDescription('Academy log for training officers (shows recent training events)'),
-    async execute(interaction: CommandInteraction) {
-    // Only allow users with the 'Training Officer' role
+        .setDescription('Academy log for training officers (shows recent training events)') as SlashCommandBuilder;
+    public global = false;
+
+    protected async executeCommand(_client: ExtendedClient, interaction: ChatInputCommandInteraction): Promise<void> {
+        // Only allow users with the 'Training Officer' role
         const member = interaction.member;
         if (!member || typeof member !== 'object' || !('roles' in member) || typeof member.roles !== 'object' || !('cache' in member.roles) ||
             !member.roles.cache.some((role: any) => role.name === 'Training Officer')) {
-            await interaction.reply({ content: 'You do not have permission to use this command.', ephemeral: true });
+            await interaction.editReply({ content: 'You do not have permission to use this command.' });
             return;
         }
         const events = await prisma.event.findMany({
@@ -23,7 +24,7 @@ module.exports = {
             include: { participants: { include: { user: true } } },
         });
         if (!events.length) {
-            await interaction.reply('No recent training events found.');
+            await interaction.editReply('No recent training events found.');
             return;
         }
         const embed = {
@@ -33,6 +34,8 @@ module.exports = {
                 value: `Participants: ${ev.participants.map(p => p.user.username).join(', ') || 'None'} | Points: ${ev.pointsAwarded ?? 0}\nNotes: ${ev.notes || 'None'}\nImage: ${ev.imageLink || 'None'}`,
             })),
         };
-        await interaction.reply({ embeds: [embed] });
-    },
-};
+        await interaction.editReply({ embeds: [embed] });
+    }
+}
+
+export default new AcademyLogCommand();

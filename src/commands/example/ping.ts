@@ -1,16 +1,18 @@
-import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
-import { ChatInputCommand } from '../../interfaces';
+import { PermissionsBitField, SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { BaseCommand } from '../../classes/BaseCommand';
+import ExtendedClient from '../../classes/Client';
 
-// Example slash command (localization removed)
-const command: ChatInputCommand = {
-    options: new SlashCommandBuilder()
+class PingCommand extends BaseCommand {
+    public options = new SlashCommandBuilder()
         .setName('ping')
         .setDescription('Replies with Pong!')
         .setDMPermission(true)
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.SendMessages),
-    global: true,
-    execute: async (_client, interaction) => {
-        interaction.reply({ content: 'Pong! 🏓', ephemeral: true });
-    },
-};
-export default command;
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.SendMessages) as SlashCommandBuilder;
+    public global = true;
+
+    protected async executeCommand(_client: ExtendedClient, interaction: ChatInputCommandInteraction): Promise<void> {
+        await interaction.editReply({ content: 'Pong! 🏓' });
+    }
+}
+
+export default new PingCommand();
