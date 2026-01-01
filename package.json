@@ -27,9 +27,13 @@
     "@fluent/bundle": "^0.17.1",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
+    "@types/express-session": "^1.18.2",
+    "@types/helmet": "^0.0.48",
     "discord.js": "^14.21.0",
     "dotenv": "^16.0.3",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "express-session": "^1.18.2",
+    "helmet": "^8.1.0"
   },
   "devDependencies": {
     "@prisma/config": "^7.2.0",

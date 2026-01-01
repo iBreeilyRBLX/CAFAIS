@@ -4,6 +4,8 @@ import robloxVerificationService from './robloxVerificationService';
 import ExtendedClient from '../classes/Client';
 import path from 'path';
 import fs from 'fs';
+import session from 'express-session';
+import helmet from 'helmet';
 
 
 export function setupOAuthServer(client: ExtendedClient): void {
@@ -14,6 +16,100 @@ export function setupOAuthServer(client: ExtendedClient): void {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
+    // 1. Security headers
+    app.use(helmet());
+
+    // 2. Trust proxy for secure cookies (if behind reverse proxy/load balancer)
+    app.set('trust proxy', 1);
+
+    // 3. Session middleware (secure, httpOnly, signed, strong secret)
+    if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
+        throw new Error('SESSION_SECRET must be set to a strong, unique value (32+ chars) in production!');
+    }
+    app.use(session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+        },
+    }));
+
+    // 4. Serve static dashboard files securely
+    app.use('/static', express.static(path.join(process.cwd(), 'src', 'features', 'static'), {
+        maxAge: '7d',
+        setHeaders: (res, path) => {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+        },
+    }));
+
+    // Dashboard page
+    app.get('/dashboard', (req: Request, res: Response) => {
+        const dashboardPath = path.join(process.cwd(), 'src', 'features', 'static', 'dashboard.html');
+        fs.readFile(dashboardPath, 'utf8', (err, data) => {
+            if (err) {
+                res.status(500).send('Dashboard not found.');
+            }
+            else {
+                res.status(200).send(data);
+            }
+        });
+    });
+
+    // API endpoint: Get user info (real session/auth logic)
+    app.get('/api/user', async (req: Request, res: Response) => {
+        if (!req.session || !req.session.user) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+        const { discordId, robloxId } = req.session.user;
+        let discord = null;
+        let roblox = null;
+        // Fetch Discord info
+        if (discordId) {
+            try {
+                const guild = client.guilds.cache.first();
+                const member = guild ? await guild.members.fetch(discordId) : null;
+                if (member) {
+                    let avatarUrl = member.user.displayAvatarURL({ extension: 'jpg', size: 128 });
+                    if (!avatarUrl) avatarUrl = '/static/default-headshot.jpg';
+                    discord = {
+                        displayName: member.displayName || member.user.username,
+                        id: member.id,
+                        avatar: avatarUrl,
+                    };
+                }
+            }
+            catch (e) {
+                discord = { displayName: 'Unknown', id: discordId, avatar: '/static/default-headshot.jpg' };
+            }
+        }
+        // Fetch Roblox info
+        if (robloxId) {
+            try {
+                // TODO: Replace with real Roblox user info fetch
+                // const robloxUser = await robloxVerificationService.getRobloxUserById(robloxId);
+                // For now, fallback to mock/placeholder
+                roblox = {
+                    displayName: 'Unknown',
+                    id: robloxId,
+                    avatar: '/static/default-headshot.jpg',
+                };
+            }
+            catch (e) {
+                roblox = { displayName: 'Unknown', id: robloxId, avatar: '/static/default-headshot.jpg' };
+            }
+        }
+        res.json({ discord, roblox });
+    });
+
+    // API endpoint: Logout
+    app.post('/api/logout', (req: Request, res: Response) => {
+        if (req.session) req.session.destroy(() => {});
+        res.status(200).json({ success: true });
+    });
     // Health check endpoint
     app.get('/health', (req: Request, res: Response) => {
         res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -21,7 +117,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
 
     // Privacy Policy page
     app.get('/privacy', (req: Request, res: Response) => {
-        const privacyPath = path.join(__dirname, 'static', 'privacy.html');
+        const privacyPath = path.join(process.cwd(), 'src', 'features', 'static', 'privacy.html');
         fs.readFile(privacyPath, 'utf8', (err, data) => {
             if (err) {
                 res.status(500).send('Privacy Policy not found.');
@@ -34,7 +130,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
 
     // Terms of Service page
     app.get('/terms', (req: Request, res: Response) => {
-        const termsPath = path.join(__dirname, 'static', 'terms.html');
+        const termsPath = path.join(process.cwd(), 'src', 'features', 'static', 'terms.html');
         fs.readFile(termsPath, 'utf8', (err, data) => {
             if (err) {
                 res.status(500).send('Terms of Service not found.');
@@ -62,7 +158,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                         <h1>❌ Discord Verification Failed</h1>
                         <p>Error: ${error}</p>
                         <p>${error_description || 'Unknown error'}</p>
-                        <a href="https://discord.gg/jhutEvNUva" style="color: #7289DA;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA;">Back to Discord</a>
                     </body></html>`,
                 );
             }
@@ -73,7 +169,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                     `<html><body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
                         <h1>❌ Discord Verification Failed</h1>
                         <p>Missing authorization code or state.</p>
-                        <a href="https://discord.gg/jhutEvNUva" style="color: #7289DA;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA;">Back to Discord</a>
                     </body></html>`,
                 );
             }
@@ -87,7 +183,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                         <h1>❌ Verification Failed</h1>
                         <p>Invalid or expired session.</p>
                         <p>Please run <code>/verify</code> in Discord to start over.</p>
-                        <a href="https://discord.gg/jhutEvNUva" style="color: #7289DA;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA;">Back to Discord</a>
                     </body></html>`,
                 );
             }
@@ -102,7 +198,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                     `<html><body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
                         <h1>❌ Discord Authentication Failed</h1>
                         <p>Could not verify your Discord account.</p>
-                        <a href="https://discord.gg/jhutEvNUva" style="color: #7289DA;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA;">Back to Discord</a>
                     </body></html>`,
                 );
             }
@@ -115,7 +211,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                         <h1>❌ Account Mismatch</h1>
                         <p>The Discord account you authorized doesn't match the account that started verification.</p>
                         <p>Please run <code>/verify</code> from the correct Discord account.</p>
-                        <a href="https://discord.gg/jhutEvNUva" style="color: #7289DA;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA;">Back to Discord</a>
                     </body></html>`,
                 );
             }
@@ -134,7 +230,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                 `<html><body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
                     <h1>❌ An Error Occurred</h1>
                     <p>Please try again.</p>
-                    <a href="https://discord.gg/jhutEvNUva" style="color: #7289DA;">Back to Discord</a>
+                    <a href="https://discord.gg/casf" style="color: #7289DA;">Back to Discord</a>
                 </body></html>`,
             );
         }
@@ -156,7 +252,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                         <p>Error: ${error}</p>
                         <p>${errorDesc}</p>
                         <p>Please try again or contact support if the issue persists.</p>
-                        <a href="https://discord.gg/taskforce1949" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
                     </body>
                 </html>`,
                 );
@@ -169,7 +265,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                     <body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
                         <h1>❌ Verification Failed</h1>
                         <p>Missing authorization code or state token.</p>
-                        <a href="https://discord.gg/taskforce1949" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
                     </body>
                 </html>`,
                 );
@@ -185,7 +281,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                         <h1>❌ Verification Failed</h1>
                         <p>Invalid or expired verification session.</p>
                         <p>Please start over by running <code>/verify</code> in Discord.</p>
-                        <a href="https://discord.gg/taskforce1949" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
                     </body>
                 </html>`,
                 );
@@ -202,7 +298,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                     <body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
                         <h1>❌ Verification Failed</h1>
                         <p>Failed to authenticate with Roblox. Please try again.</p>
-                        <a href="https://discord.gg/taskforce1949" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
                     </body>
                 </html>`,
                 );
@@ -217,7 +313,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                     <body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
                         <h1>❌ Verification Failed</h1>
                         <p>Failed to retrieve your Roblox profile. Please try again.</p>
-                        <a href="https://discord.gg/taskforce1949" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
                     </body>
                 </html>`,
                 );
@@ -231,7 +327,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                     <body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
                         <h1>❌ Verification Failed</h1>
                         <p>Failed to save verification. Please try again.</p>
-                        <a href="https://discord.gg/taskforce1949" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
+                        <a href="https://discord.gg/casf" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
                     </body>
                 </html>`,
                 );
@@ -330,7 +426,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                 <body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
                     <h1>❌ An Unexpected Error Occurred</h1>
                     <p>Please try again or contact support.</p>
-                    <a href="https://discord.gg/taskforce1949" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
+                    <a href="https://discord.gg/casf" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
                 </body>
             </html>`,
             );
