@@ -4,6 +4,11 @@
       "id": 1,
       "name": "Onboarding Verification",
       "channelId": "1454533143150333994"
+    },
+    {
+      "id": 2,
+      "name": "Application Center",
+      "channelId": "1454533311245320334"
     }
   ]
 }

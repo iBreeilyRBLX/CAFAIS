@@ -8,22 +8,25 @@ import {
     ButtonBuilder as DjsButtonBuilder,
     ActionRowBuilder as DjsActionRowBuilder,
     ButtonStyle as DjsButtonStyle,
+    MessageFlags,
 } from 'discord.js';
 import { ModalSubmit } from '../../../interfaces';
 import prisma from '../../../database/prisma';
+import robloxGroupService from '../../../features/robloxGroupService';
 
 const modalHandler: ModalSubmit = {
-    name: 'startApplication',
+    name: 'applicationModal',
     execute: async (client, interaction: ModalSubmitInteraction) => {
         const applicationReason = interaction.fields.getTextInputValue('applicationReason');
-        const foundserver = interaction.fields.getTextInputValue('foundserver');
+        const foundServer = interaction.fields.getTextInputValue('foundserver');
         const age = interaction.fields.getTextInputValue('age');
 
         // Fetch user's Roblox profile from database using Prisma
         let robloxProfile = 'Not verified';
         let robloxDisplayName = 'Unknown';
+        let verifiedUser: Awaited<ReturnType<typeof prisma.verifiedUser.findUnique>> | null = null;
         try {
-            const verifiedUser = await prisma.verifiedUser.findUnique({
+            verifiedUser = await prisma.verifiedUser.findUnique({
                 where: { discordId: interaction.user.id },
             });
             if (verifiedUser) {
@@ -35,7 +38,58 @@ const modalHandler: ModalSubmit = {
             console.error('[ERROR] Failed to fetch Roblox profile from database:', error);
         }
 
-        const channelId = '1308670516047118346';
+        if (!verifiedUser) {
+            await interaction.reply({
+                content: 'Please verify your Roblox account and submit a join request to our Roblox group before applying: https://www.roblox.com/groups/11590462',
+                ephemeral: true,
+            });
+            return;
+        }
+
+        const robloxUserId = Number(verifiedUser.robloxId);
+        if (!Number.isFinite(robloxUserId)) {
+            await interaction.reply({
+                content: 'We could not read your Roblox account. Please try re-verifying before applying.',
+                ephemeral: true,
+            });
+            return;
+        }
+
+        let hasPendingJoinRequestOrMember = false;
+        try {
+            const alreadyMember = await robloxGroupService.userIsMember(robloxUserId);
+            hasPendingJoinRequestOrMember = alreadyMember || (await robloxGroupService.userHasPendingJoinRequest(robloxUserId));
+        }
+        catch (error) {
+            console.error('[ERROR] Failed to validate Roblox group join request:', error);
+            await interaction.reply({
+                content: 'Could not verify your Roblox group join request right now. Please try again shortly.',
+                ephemeral: true,
+            });
+            return;
+        }
+
+        if (!hasPendingJoinRequestOrMember) {
+            await interaction.reply({
+                content: 'You need to submit a join request to our Roblox group before applying: https://www.roblox.com/groups/11590462',
+                ephemeral: true,
+            });
+            return;
+        }
+
+        // Check if user already has a pending application
+        const existingApplication = await prisma.applicationSubmission.findUnique({
+            where: { userDiscordId: interaction.user.id },
+        });
+        if (existingApplication && existingApplication.isPending) {
+            await interaction.reply({
+                content: `You already have a pending application. Please wait for it to be reviewed before submitting another one. (Submission attempt #${existingApplication.submissionCount + 1})`,
+                ephemeral: true,
+            });
+            return;
+        }
+
+        const channelId = '1454533368854085663';
         if (!channelId) {
             console.error('[ERROR] APPLICATIONS_CHANNEL_ID is not defined.');
             return;
@@ -84,30 +138,42 @@ const modalHandler: ModalSubmit = {
         };
 
         const estimatedOutcome = estimateApplicationOutcome(applicationReason, age);
+        const submissionAttempt = (existingApplication?.submissionCount ?? 0) + 1;
 
         // Use ContainerBuilder for the application message
         const container = new ContainerBuilder();
 
-        const title = new TextDisplayBuilder().setContent('# New Application Submission');
+        const title = new TextDisplayBuilder().setContent('# 📋 New Application Submission');
         container.addTextDisplayComponents(title);
 
+        const userInfo = new TextDisplayBuilder().setContent(
+            `👤 **${interaction.user.tag}** (${interaction.user.id}) <@${interaction.user.id}>\n` +
+            `🎮 **Roblox:** ${robloxDisplayName}\n` +
+            `🔗 [View Roblox Profile](${robloxProfile})`,
+        );
+        container.addTextDisplayComponents(userInfo);
+
+        const separator1a = new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true });
+        container.addSeparatorComponents(separator1a);
+
+        const applicationInfo = new TextDisplayBuilder().setContent(
+            `\`#${submissionAttempt}\` **Submission Attempt**\n\n` +
+            `**Why are you applying?**\n\`\`\`\n${applicationReason}\n\`\`\`\n\n` +
+            `**Where did you find us?** ${foundServer}\n` +
+            `**Are they above 13?** ${age}`,
+        );
+        container.addTextDisplayComponents(applicationInfo);
+
+        const separator1b = new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true });
+        container.addSeparatorComponents(separator1b);
+
+        const outcomeEmoji = estimatedOutcome === 'approve' ? '✅' : estimatedOutcome === 'guest' ? '👥' : '❌';
+        const outcome = new TextDisplayBuilder().setContent(
+            `${outcomeEmoji} **Estimated Outcome:** ${estimatedOutcome.charAt(0).toUpperCase() + estimatedOutcome.slice(1)}`,
+        );
+        container.addTextDisplayComponents(outcome);
         const separator1 = new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true });
         container.addSeparatorComponents(separator1);
-
-        const description = new TextDisplayBuilder().setContent(
-            `A new application has been submitted by <@${interaction.user.id}>.\n\n` +
-            `**Applicant:** ${interaction.user.tag} (${interaction.user.id})\n` +
-            `**Roblox Account:** ${robloxDisplayName}\n` +
-            `**Roblox Profile Link:** [View Profile](${robloxProfile})\n` +
-            `**Reason for Applying:** ${applicationReason}\n` +
-            `**Where did you find us?:** ${foundserver}\n` +
-            `**Are they above 13 or not?:** ${age}\n` +
-            `**Estimated Outcome:** ${estimatedOutcome.charAt(0).toUpperCase() + estimatedOutcome.slice(1)}\n`,
-        );
-        container.addTextDisplayComponents(description);
-
-        const separator2 = new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true });
-        container.addSeparatorComponents(separator2);
 
         const approveButton = new DjsButtonBuilder()
             .setCustomId(`approveApplication_${interaction.user.id}`)
@@ -117,14 +183,55 @@ const modalHandler: ModalSubmit = {
         const denyButton = new DjsButtonBuilder()
             .setCustomId(`denyApplication_${interaction.user.id}`)
             .setLabel('Deny')
+            .setStyle(DjsButtonStyle.Secondary);
+
+        const kickButton = new DjsButtonBuilder()
+            .setCustomId(`kickApplication_${interaction.user.id}`)
+            .setLabel('Kick')
+            .setStyle(DjsButtonStyle.Danger);
+
+        const banButton = new DjsButtonBuilder()
+            .setCustomId(`banApplication_${interaction.user.id}`)
+            .setLabel('Ban Permanently')
             .setStyle(DjsButtonStyle.Danger);
 
         // Use ActionRowBuilder<ButtonBuilder> for correct typing
-        const actionRow = new DjsActionRowBuilder<DjsButtonBuilder>().addComponents(approveButton, denyButton);
+        const actionRow = new DjsActionRowBuilder<DjsButtonBuilder>().addComponents(approveButton, denyButton, kickButton, banButton);
         container.addActionRowComponents(actionRow);
 
         try {
-            await applicationsChannel.send(container.toJSON());
+            await applicationsChannel.send({
+                flags: MessageFlags.IsComponentsV2,
+                components: [container],
+            });
+
+            // Track the application submission in the database
+            if (existingApplication) {
+                // User has reapplied after being rejected, increment the submission count
+                await prisma.applicationSubmission.update({
+                    where: { userDiscordId: interaction.user.id },
+                    data: {
+                        submissionCount: existingApplication.submissionCount + 1,
+                        isPending: true,
+                        applicationReason,
+                        foundServer,
+                        age,
+                    },
+                });
+            }
+            else {
+                // First application from this user
+                await prisma.applicationSubmission.create({
+                    data: {
+                        userDiscordId: interaction.user.id,
+                        submissionCount: 1,
+                        isPending: true,
+                        applicationReason,
+                        foundServer,
+                        age,
+                    },
+                });
+            }
         }
         catch (error) {
             console.error('[ERROR] Failed to send application message:', error);

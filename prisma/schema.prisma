@@ -49,6 +49,7 @@ model UserProfile {
   rankCooldowns RankCooldown[]
   rankLocks    RankLock[]
   awards       Award[]
+  applicationSubmissions ApplicationSubmission[]
   verifiedUser VerifiedUser?
 }
 
@@ -141,4 +142,20 @@ model Award {
   user       UserProfile @relation(fields: [userDiscordId], references: [discordId])
   @@index([userDiscordId])
   @@index([name])
+}
+
+model ApplicationSubmission {
+  id                String      @id @default(uuid())
+  userDiscordId     String
+  submissionCount   Int         @default(1)
+  isPending         Boolean     @default(true)
+  applicationReason String?
+  foundServer       String?
+  age               String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  user              UserProfile @relation(fields: [userDiscordId], references: [discordId], onDelete: Cascade)
+  @@unique([userDiscordId])
+  @@index([userDiscordId])
+  @@index([isPending])
 }

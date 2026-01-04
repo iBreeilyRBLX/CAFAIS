@@ -43,7 +43,8 @@ class RobloxVerificationService {
         const params = new URLSearchParams({
             client_id: clientId,
             response_type: 'code',
-            scope: 'identify',
+            // eslint-disable-next-line no-inline-comments
+            scope: process.env.DISCORD_OAUTH_SCOPES || 'identify', // dm_channels.messages.write',
             redirect_uri: `${baseUrl}/oauth/discord/callback`,
             state: stateToken,
         });

@@ -43,6 +43,7 @@ dist/
 # dotenv environment variables file
 .env
 .env.test
+.end.local
 
 # MacOS
 .DS_Store

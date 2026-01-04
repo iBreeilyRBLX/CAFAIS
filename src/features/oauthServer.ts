@@ -5,7 +5,9 @@ import ExtendedClient from '../classes/Client';
 import path from 'path';
 import fs from 'fs';
 import session from 'express-session';
+import { getSessionStore } from '../database/sessionStore';
 import helmet from 'helmet';
+import prisma from '../database/prisma';
 
 
 export function setupOAuthServer(client: ExtendedClient): void {
@@ -27,6 +29,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
         throw new Error('SESSION_SECRET must be set to a strong, unique value (32+ chars) in production!');
     }
     app.use(session({
+        store: getSessionStore(),
         secret: process.env.SESSION_SECRET,
         resave: false,
         saveUninitialized: false,
@@ -34,6 +37,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
+            // eslint-disable-next-line no-inline-comments
             maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
         },
     }));
@@ -41,6 +45,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
     // 4. Serve static dashboard files securely
     app.use('/static', express.static(path.join(process.cwd(), 'src', 'features', 'static'), {
         maxAge: '7d',
+        // eslint-disable-next-line no-shadow
         setHeaders: (res, path) => {
             res.setHeader('X-Content-Type-Options', 'nosniff');
         },
@@ -288,6 +293,44 @@ export function setupOAuthServer(client: ExtendedClient): void {
             }
 
             const discordId = stateVerification.discordId;
+
+            // Ensure the user profile exists so verification FK does not fail
+            let username = 'Unknown';
+            let discriminator = '0000';
+            if (stateVerification.userTag) {
+                const [tagUsername, tagDiscriminator] = stateVerification.userTag.split('#');
+                if (tagUsername) username = tagUsername;
+                if (tagDiscriminator) discriminator = tagDiscriminator;
+            }
+
+            try {
+                const discordUser = await client.users.fetch(discordId);
+                username = discordUser.username || username;
+                discriminator = discordUser.discriminator || discriminator;
+            }
+            catch (userFetchError) {
+                console.warn(`Could not fetch Discord user ${discordId} for profile upsert:`, userFetchError);
+            }
+
+            try {
+                await prisma.userProfile.upsert({
+                    where: { discordId },
+                    update: { username, discriminator },
+                    create: { discordId, username, discriminator },
+                });
+            }
+            catch (profileError) {
+                console.error('Failed to upsert user profile before verification:', profileError);
+                return res.status(500).send(
+                    `<html>
+                    <body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
+                        <h1>❌ Verification Failed</h1>
+                        <p>Could not prepare your account for verification. Please try again.</p>
+                        <a href="https://discord.gg/casf" style="color: #7289DA; text-decoration: none;">Back to Discord</a>
+                    </body>
+                </html>`,
+                );
+            }
 
             // Exchange code for access token
             const accessToken = await robloxVerificationService.exchangeCodeForToken(code);
