@@ -1,65 +1,72 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+/**
+ * @fileoverview Start Event Command - Initiates a new event with role-based restrictions
+ * @module commands/events/start-event
+ */
+
+import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember } from 'discord.js';
 import prisma from '../../database/prisma';
 import { BaseCommand } from '../../classes/BaseCommand';
 import ExtendedClient from '../../classes/Client';
-
-const EVENT_TYPES = [
-    'Combat Patrol',
-    'Money Grinding',
-    'Training',
-    'Lore',
-    'Other',
-];
+import { checkAndReplyPerms } from '../../ranks/permissionCheck';
+import { getEventTypes, validateEventTypePermission, hasTrainingDepartmentRole } from '../../utilities';
+import { createEvent } from '../../services';
 
 class StartEventCommand extends BaseCommand {
     public options = new SlashCommandBuilder()
         .setName('start-event')
-        .setDescription('Start a new event')
-        .addStringOption(option =>
-            option.setName('name')
-                .setDescription('Event name')
-                .setRequired(true),
-        )
+        .setDescription('Start a new event (NCO+ or Training Department)')
         .addStringOption(option =>
             option.setName('eventtype')
                 .setDescription('Type of event')
                 .setRequired(true)
-                .addChoices(...EVENT_TYPES.map(type => ({ name: type, value: type }))),
-        )
-        .addStringOption(option =>
-            option.setName('notes')
-                .setDescription('Event notes')
-                .setRequired(false),
-        )
-        .addStringOption(option =>
-            option.setName('image')
-                .setDescription('Image link for the event')
-                .setRequired(false),
+                .addChoices(
+                    ...getEventTypes().map(type => ({ name: type, value: type })),
+                ),
         ) as SlashCommandBuilder;
+
     public global = false;
 
     protected async executeCommand(_client: ExtendedClient, interaction: ChatInputCommandInteraction): Promise<void> {
-        // Use getString if available, fallback to old method
-        // @ts-ignore
-        const name = interaction.options.getString ? interaction.options.getString('name') : interaction.options.get('name')?.value;
-        // @ts-ignore
-        const eventType = interaction.options.getString ? interaction.options.getString('eventtype') : interaction.options.get('eventtype')?.value;
-        // @ts-ignore
-        const notes = interaction.options.getString ? interaction.options.getString('notes') : interaction.options.get('notes')?.value || undefined;
-        // @ts-ignore
-        const imageLink = interaction.options.getString ? interaction.options.getString('image') : interaction.options.get('image')?.value || undefined;
-        const now = new Date();
-        await prisma.event.create({
-            data: {
-                name: typeof name === 'string' ? name : String(name),
-                eventType: typeof eventType === 'string' ? eventType : String(eventType),
-                eventHostDiscordId: interaction.user.id,
-                notes: typeof notes === 'string' ? notes : notes ? String(notes) : null,
-                imageLink: typeof imageLink === 'string' ? imageLink : imageLink ? String(imageLink) : null,
-                startTime: now,
-            },
-        });
-        await interaction.editReply(`Event **${name}** of type **${eventType}** started at ${now.toLocaleString()}`);
+        const member = interaction.member as GuildMember;
+        if (!member) {
+            await interaction.editReply({ content: 'Unable to verify your permissions.' });
+            return;
+        }
+
+        // Check base NCO+ or Training Department permission
+        const hasTrainingRole = hasTrainingDepartmentRole(member);
+        const hasNcoPermission = await checkAndReplyPerms(interaction, 'start-event');
+
+        if (!hasNcoPermission && !hasTrainingRole) {
+            // Permission check already replied with error
+            return;
+        }
+
+        // Get command options
+        const eventType = interaction.options.getString('eventtype', true);
+
+        // Validate event type permission
+        const validation = validateEventTypePermission(member, eventType, hasNcoPermission);
+        if (!validation.allowed) {
+            await interaction.editReply({ content: validation.error });
+            return;
+        }
+
+        // Create event in database
+        try {
+            const event = await createEvent(eventType, interaction.user.id);
+            const now = new Date();
+
+            await interaction.editReply({
+                content: `✅ **${eventType}** event started at ${now.toLocaleString()}.\nEvent ID: ${event.id}`,
+            });
+        }
+        catch (error) {
+            console.error('[start-event] Failed to create event:', error);
+            await interaction.editReply({
+                content: '❌ Failed to start event. Please try again or contact an administrator.',
+            });
+        }
     }
 }
 

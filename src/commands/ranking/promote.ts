@@ -1,11 +1,23 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, ContainerBuilder, TextDisplayBuilder, MessageFlags } from 'discord.js';
 import { BaseCommand } from '../../classes/BaseCommand';
 import ExtendedClient from '../../classes/Client';
-import prisma from '../../database/prisma';
 import { ranks } from '../../ranks/ranks';
 import { checkAndReplyPerms } from '../../ranks/permissionCheck';
 
 // filepath: /home/admin/cafais/src/commands/ranking/promote.ts
+
+const PROMOTION_LOG_CHANNEL_ID = '1454639433566519306';
+
+type PromotionLogDetails = {
+    executorId: string;
+    executorTag: string;
+    promotedId: string;
+    promotedTag: string;
+    fromRank: string;
+    toRank: string;
+    reason: string;
+    timestamp?: number;
+};
 
 class PromoteCommand extends BaseCommand {
     public options = new SlashCommandBuilder()
@@ -28,13 +40,14 @@ class PromoteCommand extends BaseCommand {
         return true;
     }
 
-    protected async executeCommand(_client: ExtendedClient, interaction: ChatInputCommandInteraction): Promise<void> {
+    protected async executeCommand(client: ExtendedClient, interaction: ChatInputCommandInteraction): Promise<void> {
         try {
             if (!(await checkAndReplyPerms(interaction, 'promote'))) {
                 return;
             }
 
             const targetUser = interaction.options.getUser('user', true);
+            const reason = interaction.options.getString('reason') || 'No reason provided.';
             const member = await interaction.guild?.members.fetch(targetUser.id);
 
             if (!member) {
@@ -92,6 +105,16 @@ class PromoteCommand extends BaseCommand {
                 console.warn(`Could not update nickname for ${targetUser.id}`);
             }
 
+            await this.logPromotion(client, {
+                executorId: interaction.user.id,
+                executorTag: interaction.user.tag,
+                promotedId: targetUser.id,
+                promotedTag: targetUser.tag,
+                fromRank: currentRank.name,
+                toRank: nextRank.name,
+                reason,
+            });
+
             const container = new ContainerBuilder();
             const content = new TextDisplayBuilder().setContent(
                 `# ✅ Promotion Successful\n\n${targetUser.username} has been promoted from **${currentRank.name}** to **${nextRank.name}**.`,
@@ -111,6 +134,50 @@ class PromoteCommand extends BaseCommand {
                 flags: MessageFlags.IsComponentsV2,
                 components: [container],
             });
+        }
+    }
+
+    private buildPromotionLogContainer(details: PromotionLogDetails): ContainerBuilder {
+        const container = new ContainerBuilder();
+        const timestamp = details.timestamp ?? Math.floor(Date.now() / 1000);
+
+        const title = new TextDisplayBuilder().setContent('# Promotion Log');
+        container.addTextDisplayComponents(title);
+
+        const body = new TextDisplayBuilder().setContent(
+            '**Promoted User:** <@' + details.promotedId + '> (' + details.promotedTag + ')\n' +
+            '**From:** ' + details.fromRank + '\n' +
+            '**To:** ' + details.toRank + '\n' +
+            '**By:** <@' + details.executorId + '> (' + details.executorTag + ')\n' +
+            '**Reason:** ' + details.reason + '\n' +
+            '**Time:** <t:' + timestamp + ':F>',
+        );
+        container.addTextDisplayComponents(body);
+
+        return container;
+    }
+
+    private async logPromotion(client: ExtendedClient, details: PromotionLogDetails): Promise<void> {
+        try {
+            const channel = await client.channels.fetch(PROMOTION_LOG_CHANNEL_ID);
+
+            if (!channel || !channel.isTextBased() || !channel.isSendable()) {
+                console.warn(`Promotion log channel ${PROMOTION_LOG_CHANNEL_ID} not found or not text based`);
+                return;
+            }
+
+            const logContainer = this.buildPromotionLogContainer({
+                ...details,
+                timestamp: Math.floor(Date.now() / 1000),
+            });
+
+            await channel.send({
+                flags: MessageFlags.IsComponentsV2,
+                components: [logContainer],
+            });
+        }
+        catch (error) {
+            console.error('Error logging promotion:', error);
         }
     }
 }

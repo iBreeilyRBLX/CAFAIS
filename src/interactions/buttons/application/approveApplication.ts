@@ -74,16 +74,16 @@ const button: Button = {
 
             // Update with approval status and application details
             const now = new Date();
-            const timestamp = now.toLocaleString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: '2-digit', 
-                hour: '2-digit', 
-                minute: '2-digit', 
+            const timestamp = now.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
                 second: '2-digit',
-                hour12: true 
+                hour12: true,
             });
-            
+
             const container = new ContainerBuilder();
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# 📋 Application Review'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
@@ -102,6 +102,10 @@ const button: Button = {
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ✅ Application Approved'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: false }));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
+            const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
+            const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername}) ([View Profile](${robloxProfile}))`));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox Group:** ${groupResultText}`));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`✍️ **Approved by:** ${author.displayName}`));
 
@@ -112,9 +116,6 @@ const button: Button = {
             await member.roles.remove('1454532106565845064'); // Remove Applicant role
             await member.roles.add('1454248763915898971');
 
-            // Get verified user info for Roblox details
-            const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
-            const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
 
             const dmContainer = new ContainerBuilder();
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ✅ Application Approved'));

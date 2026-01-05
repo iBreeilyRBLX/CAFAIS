@@ -10,10 +10,11 @@ export interface Rank {
 
 export const ranks: Rank[] = [
     // HICOM: PRX, MAR, GEN, LTG
-    { name: 'Prime Executive', prefix: 'PRX', discordRoleId: '1454231103425613874', permissionSet: '../rank-permissions/hicom.json' },
-    { name: 'Marshal', prefix: 'MAR', discordRoleId: '1454232393451048960', permissionSet: '../rank-permissions/hicom.json' },
-    { name: 'General', prefix: 'GEN', discordRoleId: '1454246002667159713', permissionSet: '../rank-permissions/hicom.json' },
-    { name: 'Lieutenant General', prefix: 'LTG', discordRoleId: '1454246064671690772', permissionSet: '../rank-permissions/hicom.json' },
+    { name: 'Bot Devloper', prefix: 'BOT', discordRoleId: '1454231933994274900', permissionSet: '/rank-permissions/bot-dev.json' },
+    { name: 'Prime Executive', prefix: 'PRX', discordRoleId: '1454231103425613874', permissionSet: '/rank-permissions/hicom.json' },
+    { name: 'Marshal', prefix: 'MAR', discordRoleId: '1454232393451048960', permissionSet: '/rank-permissions/hicom.json' },
+    { name: 'General', prefix: 'GEN', discordRoleId: '1454246002667159713', permissionSet: '/rank-permissions/hicom.json' },
+    { name: 'Lieutenant General', prefix: 'LTG', discordRoleId: '1454246064671690772', permissionSet: '/rank-permissions/hicom.json' },
     // Officers: CMD, CPT, LTT, JLT
     { name: 'Commander', prefix: 'CMD', discordRoleId: '1454246615362830469', permissionSet: '../rank-permissions/officer.json' },
     { name: 'Captain', prefix: 'CPT', discordRoleId: '1454247249117843497', permissionSet: '../rank-permissions/officer.json' },

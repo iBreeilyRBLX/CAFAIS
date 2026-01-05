@@ -148,7 +148,7 @@ const modalHandler: ModalSubmit = {
 
         const userInfo = new TextDisplayBuilder().setContent(
             `👤 **${interaction.user.tag}** (${interaction.user.id}) <@${interaction.user.id}>\n` +
-            `🎮 **Roblox:** ${robloxDisplayName}\n` +
+            `🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername})\n` +
             `🔗 [View Roblox Profile](${robloxProfile})`,
         );
         container.addTextDisplayComponents(userInfo);

@@ -59,7 +59,13 @@ const button: Button = {
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`<@${applicantId}> has been kicked for application denial.`));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
+            if (verifiedUser) {
+                const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
+                const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername}) ([View Profile](${robloxProfile}))`));
+            }
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('The applicant has been kicked for application denial.'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👢 **Action taken by:** ${author.displayName}`));
 

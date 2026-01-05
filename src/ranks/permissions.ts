@@ -15,18 +15,47 @@ interface PermissionSet {
  * @returns boolean
  */
 export async function hasCommandPermission(member: GuildMember, commandName: string): Promise<boolean> {
-    // Find the highest rank the user has
     const userRank: Rank | undefined = ranks.find(rank => member.roles.cache.has(rank.discordRoleId));
-    if (!userRank) return false;
-    // Load the permission set JSON
-    const permPath = path.resolve(__dirname, userRank.permissionSet);
-    if (!fs.existsSync(permPath)) return false;
-    const permSet: PermissionSet = JSON.parse(fs.readFileSync(permPath, 'utf-8'));
+    if (!userRank) {
+        return false;
+    }
+
+    // Resolve permission file with several fallbacks (prefer src paths, then dist)
+    const filename = path.basename(userRank.permissionSet);
+    const candidatePaths = [
+        // Source locations (preferred)
+        path.resolve(process.cwd(), 'src', 'rank-permissions', filename),
+        path.resolve(process.cwd(), 'src', 'ranks', 'rank-permissions', filename),
+        path.resolve(process.cwd(), 'src', 'ranks', 'rank-permmisions', filename),
+        // Dist-adjacent paths
+        path.resolve(__dirname, '..', 'rank-permissions', filename),
+        path.resolve(__dirname, userRank.permissionSet),
+    ];
+
+    const permPath = candidatePaths.find(p => fs.existsSync(p));
+
+    if (!permPath) {
+        console.warn(`[perm] Permission file not found for rank ${userRank.name}. Tried: ${candidatePaths.join(', ')}`);
+        return false;
+    }
+
+    let permSet: PermissionSet;
+    try {
+        permSet = JSON.parse(fs.readFileSync(permPath, 'utf-8')) as PermissionSet;
+    }
+    catch (error) {
+        console.error(`[perm] Failed to parse permissions for rank ${userRank.name} from ${permPath}`, error);
+        return false;
+    }
+
     if (permSet.type === '.INCLUDE') {
         return permSet.commands.includes('*') || permSet.commands.includes(commandName);
     }
-    else if (permSet.type === '.EXCEPT') {
+
+    if (permSet.type === '.EXCEPT') {
         return !permSet.commands.includes(commandName);
     }
+
+    console.warn(`[perm] Unknown permission set type for rank ${userRank.name}: ${permSet.type}`);
     return false;
 }

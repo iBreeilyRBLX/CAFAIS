@@ -60,7 +60,13 @@ const button: Button = {
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`The application for <@${applicantId}> has been denied.`));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
+            if (verifiedUser) {
+                const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
+                const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername}) ([View Profile](${robloxProfile}))`));
+            }
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('The application has been denied.'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`❌ **Denied by:** ${author.displayName}`));
 
@@ -68,7 +74,7 @@ const button: Button = {
             await interaction.followUp({ content: '❌ Application denied.', ephemeral: true });
 
             // Remove Applicant role
-            await member.roles.remove('1454532106565845064');
+            // await member.roles.remove('1454532106565845064');
 
             const dmContainer = new ContainerBuilder();
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ❌ Application Denied'));
