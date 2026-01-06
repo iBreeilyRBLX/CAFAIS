@@ -29,7 +29,7 @@ export const LOG_CHANNELS = {
 /**
  * Batching configuration
  */
-const BATCH_FLUSH_DELAY_MS = 5000; // 5 seconds
+const BATCH_FLUSH_DELAY_MS = 10000; // 10 seconds
 
 /**
  * Buffer for batching promotion logs
