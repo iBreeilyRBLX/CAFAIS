@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize } from 'discord.js';
 import prisma from '../../database/prisma';
 import { BaseCommand } from '../../classes/BaseCommand';
 import ExtendedClient from '../../classes/Client';
@@ -82,24 +82,69 @@ class ProfileCommand extends BaseCommand {
             rankLockStatus = `Locked at: ${rankLocks.map(l => l.rank).join(', ')}`;
         }
 
+        // Build container
+        const container = new ContainerBuilder();
+
+        // Title
+        const title = new TextDisplayBuilder()
+            .setContent(`# ${profile.username}#${profile.discriminator}`);
+        container.addTextDisplayComponents(title);
+
+        // User ID
+        const userInfo = new TextDisplayBuilder()
+            .setContent(`**Discord ID:** ${profile.discordId}`);
+        container.addTextDisplayComponents(userInfo);
+
+        // Separator
+        const separator1 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator1);
+
+        // Ranking Info
+        const rankingInfo = new TextDisplayBuilder()
+            .setContent(
+                `**Current Rank:** ${currentRank}\n` +
+                `**Points:** ${profile.points}\n` +
+                `**Cooldown Status:** ${cooldownStatus}\n` +
+                `**Rank Lock Status:** ${rankLockStatus}`,
+            );
+        container.addTextDisplayComponents(rankingInfo);
+
+        // Separator
+        const separator2 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator2);
+
+        // Roblox Verification Info
+        const robloxInfo = new TextDisplayBuilder()
+            .setContent(
+                `**Roblox User ID:** ${profile.verifiedUser?.robloxId?.toString() || 'Not linked'}\n` +
+                `**Roblox Username:** ${profile.verifiedUser?.robloxUsername || 'Not linked'}\n` +
+                `**Roblox Display Name:** ${profile.verifiedUser?.robloxDisplayName || 'Not linked'}`,
+            );
+        container.addTextDisplayComponents(robloxInfo);
+
+        // Separator
+        const separator3 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator3);
+
+        // Account Timestamps
+        const timestamps = new TextDisplayBuilder()
+            .setContent(
+                `**Created:** <t:${Math.floor(profile.createdAt.getTime() / 1000)}:F>\n` +
+                `**Last Updated:** <t:${Math.floor(profile.updatedAt.getTime() / 1000)}:F>`,
+            );
+        container.addTextDisplayComponents(timestamps);
+
         await interaction.editReply({
-            embeds: [
-                {
-                    title: `${profile.username}#${profile.discriminator}`,
-                    description: `ID: ${profile.discordId}`,
-                    fields: [
-                        { name: 'Current Rank', value: currentRank, inline: true },
-                        { name: 'Points', value: profile.points.toString(), inline: true },
-                        { name: 'Cooldown Status', value: cooldownStatus, inline: false },
-                        { name: 'Rank Lock Status', value: rankLockStatus, inline: false },
-                        { name: 'Roblox User ID', value: profile.verifiedUser?.robloxId?.toString() || 'Not linked', inline: true },
-                        { name: 'Roblox Username', value: profile.verifiedUser?.robloxUsername || 'Not linked', inline: true },
-                        { name: 'Roblox Display Name', value: profile.verifiedUser?.robloxDisplayName || 'Not linked', inline: true },
-                        { name: 'Created', value: profile.createdAt.toISOString(), inline: true },
-                        { name: 'Updated', value: profile.updatedAt.toISOString(), inline: true },
-                    ],
-                },
-            ],
+            components: [container],
         });
     }
 }
