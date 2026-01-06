@@ -15,19 +15,19 @@ export const rankRequirements: Record<string, RankRequirement> = {
     LTG: { cooldownDays: 0, minPoints: 0 },
 
     // Officers
-    CMD: { cooldownDays: 5, minPoints: 150 },
-    CPT: { cooldownDays: 5, minPoints: 120 },
-    LTT: { cooldownDays: 4, minPoints: 100 },
-    JLT: { cooldownDays: 4, minPoints: 90 },
+    CMD: { cooldownDays: 63, minPoints: 180 },
+    CPT: { cooldownDays: 56, minPoints: 160 },
+    LTT: { cooldownDays: 49, minPoints: 140 },
+    JLT: { cooldownDays: 42, minPoints: 120 },
 
     // NCOs
-    CCH: { cooldownDays: 3, minPoints: 75 },
-    CH1: { cooldownDays: 3, minPoints: 65 },
-    CH2: { cooldownDays: 2, minPoints: 60 },
-    SPS: { cooldownDays: 2, minPoints: 50 },
-    SSG: { cooldownDays: 2, minPoints: 40 },
-    SGT: { cooldownDays: 21, minPoints: 35 },
-    JSG: { cooldownDays: 21, minPoints: 25 },
+    CCH: { cooldownDays: 35, minPoints: 105 },
+    CH1: { cooldownDays: 35, minPoints: 90 },
+    CH2: { cooldownDays: 35, minPoints: 75 },
+    SPS: { cooldownDays: 28, minPoints: 60 },
+    SSG: { cooldownDays: 28, minPoints: 50 },
+    SGT: { cooldownDays: 21, minPoints: 40 },
+    JSG: { cooldownDays: 21, minPoints: 30 },
 
     // Enlisted
     CPL: { cooldownDays: 14, minPoints: 20 },
