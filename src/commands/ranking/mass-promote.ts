@@ -12,6 +12,7 @@ import { BaseCommand } from '../../classes/BaseCommand';
 import ExtendedClient from '../../classes/Client';
 import { ranks } from '../../ranks/ranks';
 import { checkAndReplyPerms } from '../../ranks/permissionCheck';
+import { canPromoteToRank } from '../../ranks/permissions';
 import { logPromotion } from '../../features/discordLogger';
 import { PromotionLogData } from '../../types/ranking';
 
@@ -200,6 +201,22 @@ class MassPromoteCommand extends BaseCommand {
 
             const nextRank = ranks[currentRankIndex - 1];
 
+            // Check if executor can promote to this rank
+            const promotionCheck = canPromoteToRank(
+                interaction.member as GuildMember,
+                nextRank.prefix,
+            );
+            if (!promotionCheck.canPromote) {
+                return {
+                    userId,
+                    member,
+                    currentRank: currentRank.name,
+                    targetRank: nextRank.name,
+                    success: false,
+                    error: promotionCheck.reason || 'Insufficient promotion authority',
+                };
+            }
+
             // Remove current rank and add next rank
             await member.roles.remove(currentRank.discordRoleId);
             await member.roles.add(nextRank.discordRoleId);
@@ -331,6 +348,8 @@ interface PromotionResult {
     member?: GuildMember;
     currentRank?: string;
     newRank?: string;
+    /** For failed promotions where we tried to promote to a specific rank */
+    targetRank?: string;
     success: boolean;
     error?: string;
 }

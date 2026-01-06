@@ -8,35 +8,37 @@ export type RankRequirement = {
 };
 
 export const rankRequirements: Record<string, RankRequirement> = {
-    // HICOM
+    // HICOM (High Command)
     PRX: { cooldownDays: 0, minPoints: 0 },
     MAR: { cooldownDays: 0, minPoints: 0 },
     GEN: { cooldownDays: 0, minPoints: 0 },
     LTG: { cooldownDays: 0, minPoints: 0 },
 
     // Officers
-    CMD: { cooldownDays: 7, minPoints: 250 },
-    CPT: { cooldownDays: 7, minPoints: 200 },
-    LTT: { cooldownDays: 5, minPoints: 170 },
-    JLT: { cooldownDays: 5, minPoints: 150 },
+    CMD: { cooldownDays: 5, minPoints: 150 },
+    CPT: { cooldownDays: 5, minPoints: 120 },
+    LTT: { cooldownDays: 4, minPoints: 100 },
+    JLT: { cooldownDays: 4, minPoints: 90 },
 
     // NCOs
-    CCH: { cooldownDays: 4, minPoints: 130 },
-    CH1: { cooldownDays: 4, minPoints: 120 },
-    CH2: { cooldownDays: 3, minPoints: 110 },
-    SPS: { cooldownDays: 3, minPoints: 100 },
-    SSG: { cooldownDays: 3, minPoints: 90 },
-    SGT: { cooldownDays: 2, minPoints: 75 },
-    JSG: { cooldownDays: 2, minPoints: 60 },
+    CCH: { cooldownDays: 3, minPoints: 75 },
+    CH1: { cooldownDays: 3, minPoints: 65 },
+    CH2: { cooldownDays: 2, minPoints: 60 },
+    SPS: { cooldownDays: 2, minPoints: 50 },
+    SSG: { cooldownDays: 2, minPoints: 40 },
+    SGT: { cooldownDays: , minPoints: 35 },
+    JSG: { cooldownDays: 21, minPoints: 25 },
 
     // Enlisted
-    CPL: { cooldownDays: 2, minPoints: 45 },
-    LCP: { cooldownDays: 1.5, minPoints: 35 },
-    SSP: { cooldownDays: 1, minPoints: 4 },
-    SPV: { cooldownDays: 1, minPoints: 4 },
+    CPL: { cooldownDays: 14, minPoints: 20 },
+    LCP: { cooldownDays: 14, minPoints: 10 },
+    SSP: { cooldownDays: 7, minPoints: 3 },
+    SPV: { cooldownDays: 7, minPoints: 7 },
     PVT: { cooldownDays: 0, minPoints: 0 },
-    INT: { cooldownDays: 0.25, minPoints: 0 },
+    INT: { cooldownDays: 0, minPoints: 0 },
 };
+
+// Point calculation: 2 points per 1-hour event, +1 point for every 30 mins beyond the first hour
 
 // Usage idea (example): when promoting from rank X, ensure the member has been in-rank
 // for at least cooldownDays (convert to milliseconds/days as needed) AND meets minPoints.

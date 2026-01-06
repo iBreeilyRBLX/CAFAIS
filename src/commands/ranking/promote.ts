@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, ContainerBuilder, TextDisplayBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, ContainerBuilder, TextDisplayBuilder, MessageFlags, GuildMember } from 'discord.js';
 import { BaseCommand } from '../../classes/BaseCommand';
 import ExtendedClient from '../../classes/Client';
 import { ranks } from '../../ranks/ranks';
@@ -94,7 +94,7 @@ class PromoteCommand extends BaseCommand {
             const nextRank = ranks[currentRankIndex - 1];
 
             // Check if executor can promote to this rank
-            const promotionCheck = canPromoteToRank(interaction.member as any, nextRank.prefix);
+            const promotionCheck = canPromoteToRank(interaction.member as GuildMember, nextRank.prefix);
             if (!promotionCheck.canPromote) {
                 const container = new ContainerBuilder();
                 const content = new TextDisplayBuilder().setContent(
