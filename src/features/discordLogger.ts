@@ -27,6 +27,23 @@ export const LOG_CHANNELS = {
 } as const;
 
 /**
+ * Batching configuration
+ */
+const BATCH_FLUSH_DELAY_MS = 5000; // 5 seconds
+
+/**
+ * Buffer for batching promotion logs
+ */
+const promotionBuffer: PromotionLogData[] = [];
+let promotionFlushTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Buffer for batching demotion logs
+ */
+const demotionBuffer: DemotionLogData[] = [];
+let demotionFlushTimer: NodeJS.Timeout | null = null;
+
+/**
  * Formats a timestamp for Discord
  * @param date - Date to format
  * @returns Discord timestamp string
@@ -52,23 +69,53 @@ function formatDuration(durationMs: number): string {
 }
 
 /**
- * Logs a promotion to the promotions channel
+ * Logs a promotion to the promotions channel with batching
  * @param client - Discord client instance
  * @param data - Promotion log data
- * @throws Error if channel not found or message fails to send
+ * @remarks Promotions are buffered and sent in batches after a short delay
  */
-export async function logPromotion(client: Client, data: PromotionLogData): Promise<void> {
+export function logPromotion(client: Client, data: PromotionLogData): void {
+    // Add to buffer
+    promotionBuffer.push(data);
+
+    // Clear existing timer if any
+    if (promotionFlushTimer) {
+        clearTimeout(promotionFlushTimer);
+    }
+
+    // Set new flush timer
+    promotionFlushTimer = setTimeout(async () => {
+        await flushPromotionLogs(client);
+    }, BATCH_FLUSH_DELAY_MS);
+}
+
+/**
+ * Flushes all buffered promotion logs to Discord
+ * @param client - Discord client instance
+ */
+async function flushPromotionLogs(client: Client): Promise<void> {
+    if (promotionBuffer.length === 0) return;
+
     try {
         const channel = await client.channels.fetch(LOG_CHANNELS.PROMOTIONS);
         if (!channel || !(channel instanceof TextChannel)) {
             throw new Error(`Promotions log channel ${LOG_CHANNELS.PROMOTIONS} not found or invalid`);
         }
 
+        // Copy buffer and clear it
+        const logsToSend = [...promotionBuffer];
+        promotionBuffer.length = 0;
+        promotionFlushTimer = null;
+
         const container = new ContainerBuilder();
 
-        // Title
+        // Title based on count
         const title = new TextDisplayBuilder()
-            .setContent('# 📈 Promotion Logged');
+            .setContent(
+                logsToSend.length === 1
+                    ? '# 📈 Promotion Logged'
+                    : `# 📈 ${logsToSend.length} Promotions Logged`
+            );
         container.addTextDisplayComponents(title);
 
         // Separator
@@ -78,45 +125,107 @@ export async function logPromotion(client: Client, data: PromotionLogData): Prom
         });
         container.addSeparatorComponents(separator1);
 
-        // Promotion details
-        const details = new TextDisplayBuilder()
-            .setContent(
-                `**User:** <@${data.userId}> (${data.userTag})\n` +
-                `**Promotion:** \`${data.fromRank}\` → \`${data.toRank}\`\n` +
-                `**Promoted By:** <@${data.executorId}> (${data.executorUsername})\n` +
-                `**Reason:** ${data.reason || 'No reason provided'}\n` +
-                `**Timestamp:** ${formatDiscordTimestamp(data.timestamp)}` +
-                (data.pointsAwarded ? `\n**Points Awarded:** ${data.pointsAwarded}` : ''),
-            );
-        container.addTextDisplayComponents(details);
+        // Group promotions by rank transition
+        const groupedByRank = new Map<string, PromotionLogData[]>();
+        for (const log of logsToSend) {
+            const key = `${log.fromRank} → ${log.toRank}`;
+            if (!groupedByRank.has(key)) {
+                groupedByRank.set(key, []);
+            }
+            groupedByRank.get(key)!.push(log);
+        }
+
+        // Build content for each group
+        const groups = Array.from(groupedByRank.entries());
+        for (let i = 0; i < groups.length; i++) {
+            const [transition, logs] = groups[i];
+
+            if (i > 0) {
+                const separator = new SeparatorBuilder({
+                    spacing: SeparatorSpacingSize.Small,
+                    divider: true,
+                });
+                container.addSeparatorComponents(separator);
+            }
+
+            // Group header
+            const groupHeader = new TextDisplayBuilder()
+                .setContent(`**${transition}** (${logs.length} user${logs.length > 1 ? 's' : ''})`);
+            container.addTextDisplayComponents(groupHeader);
+
+            // Individual promotions in this group
+            for (const log of logs) {
+                const details = new TextDisplayBuilder()
+                    .setContent(
+                        `• <@${log.userId}> (${log.userTag})\n` +
+                        `  Promoted by: <@${log.executorId}> (${log.executorUsername})\n` +
+                        `  Reason: ${log.reason || 'No reason provided'}\n` +
+                        `  Time: ${formatDiscordTimestamp(log.timestamp)}` +
+                        (log.pointsAwarded ? `\n  Points: ${log.pointsAwarded}` : '')
+                    );
+                container.addTextDisplayComponents(details);
+            }
+        }
 
         // Send container message
         await channel.send({ components: container.components as unknown as APIMessageComponent[] });
     }
     catch (error) {
-        console.error('[discordLogger] Failed to log promotion:', error);
-        throw error;
+        console.error('[discordLogger] Failed to flush promotion logs:', error);
+        // Clear buffer even on error to prevent infinite retries
+        promotionBuffer.length = 0;
+        promotionFlushTimer = null;
     }
 }
 
 /**
- * Logs a demotion to the promotions channel
+ * Logs a demotion to the promotions channel with batching
  * @param client - Discord client instance
  * @param data - Demotion log data
- * @throws Error if channel not found or message fails to send
+ * @remarks Demotions are buffered and sent in batches after a short delay
  */
-export async function logDemotion(client: Client, data: DemotionLogData): Promise<void> {
+export function logDemotion(client: Client, data: DemotionLogData): void {
+    // Add to buffer
+    demotionBuffer.push(data);
+
+    // Clear existing timer if any
+    if (demotionFlushTimer) {
+        clearTimeout(demotionFlushTimer);
+    }
+
+    // Set new flush timer
+    demotionFlushTimer = setTimeout(async () => {
+        await flushDemotionLogs(client);
+    }, BATCH_FLUSH_DELAY_MS);
+}
+
+/**
+ * Flushes all buffered demotion logs to Discord
+ * @param client - Discord client instance
+ */
+async function flushDemotionLogs(client: Client): Promise<void> {
+    if (demotionBuffer.length === 0) return;
+
     try {
         const channel = await client.channels.fetch(LOG_CHANNELS.PROMOTIONS);
         if (!channel || !(channel instanceof TextChannel)) {
             throw new Error(`Promotions log channel ${LOG_CHANNELS.PROMOTIONS} not found or invalid`);
         }
 
+        // Copy buffer and clear it
+        const logsToSend = [...demotionBuffer];
+        demotionBuffer.length = 0;
+        demotionFlushTimer = null;
+
         const container = new ContainerBuilder();
 
-        // Title
+        // Title based on count
         const title = new TextDisplayBuilder()
-            .setContent('# 📉 Demotion Logged');
+            .setContent(
+                logsToSend.length === 1
+                    ? '# 📉 Demotion Logged'
+                    : `# 📉 ${logsToSend.length} Demotions Logged`
+            );
         container.addTextDisplayComponents(title);
 
         // Separator
@@ -126,23 +235,55 @@ export async function logDemotion(client: Client, data: DemotionLogData): Promis
         });
         container.addSeparatorComponents(separator1);
 
-        // Demotion details
-        const details = new TextDisplayBuilder()
-            .setContent(
-                `**User:** <@${data.userId}> (${data.userTag})\n` +
-                `**Demotion:** \`${data.fromRank}\` → \`${data.toRank}\`\n` +
-                `**Demoted By:** <@${data.executorId}> (${data.executorUsername})\n` +
-                `**Reason:** ${data.reason}\n` +
-                `**Timestamp:** ${formatDiscordTimestamp(data.timestamp)}`,
-            );
-        container.addTextDisplayComponents(details);
+        // Group demotions by rank transition
+        const groupedByRank = new Map<string, DemotionLogData[]>();
+        for (const log of logsToSend) {
+            const key = `${log.fromRank} → ${log.toRank}`;
+            if (!groupedByRank.has(key)) {
+                groupedByRank.set(key, []);
+            }
+            groupedByRank.get(key)!.push(log);
+        }
+
+        // Build content for each group
+        const groups = Array.from(groupedByRank.entries());
+        for (let i = 0; i < groups.length; i++) {
+            const [transition, logs] = groups[i];
+
+            if (i > 0) {
+                const separator = new SeparatorBuilder({
+                    spacing: SeparatorSpacingSize.Small,
+                    divider: true,
+                });
+                container.addSeparatorComponents(separator);
+            }
+
+            // Group header
+            const groupHeader = new TextDisplayBuilder()
+                .setContent(`**${transition}** (${logs.length} user${logs.length > 1 ? 's' : ''})`);
+            container.addTextDisplayComponents(groupHeader);
+
+            // Individual demotions in this group
+            for (const log of logs) {
+                const details = new TextDisplayBuilder()
+                    .setContent(
+                        `• <@${log.userId}> (${log.userTag})\n` +
+                        `  Demoted by: <@${log.executorId}> (${log.executorUsername})\n` +
+                        `  Reason: ${log.reason}\n` +
+                        `  Time: ${formatDiscordTimestamp(log.timestamp)}`
+                    );
+                container.addTextDisplayComponents(details);
+            }
+        }
 
         // Send container message
         await channel.send({ components: container.components as unknown as APIMessageComponent[] });
     }
     catch (error) {
-        console.error('[discordLogger] Failed to log demotion:', error);
-        throw error;
+        console.error('[discordLogger] Failed to flush demotion logs:', error);
+        // Clear buffer even on error to prevent infinite retries
+        demotionBuffer.length = 0;
+        demotionFlushTimer = null;
     }
 }
 

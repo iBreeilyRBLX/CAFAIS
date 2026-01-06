@@ -59,3 +59,61 @@ export async function hasCommandPermission(member: GuildMember, commandName: str
     console.warn(`[perm] Unknown permission set type for rank ${userRank.name}: ${permSet.type}`);
     return false;
 }
+
+/**
+ * Checks if a user can promote someone to a specific rank based on their promotion limits.
+ * @param executorMember Discord GuildMember performing the promotion
+ * @param targetRankPrefix The rank prefix they want to promote to (e.g., 'PVT', 'SGT')
+ * @returns { canPromote: boolean, reason?: string, maxRank?: string }
+ */
+export function canPromoteToRank(
+    executorMember: GuildMember,
+    targetRankPrefix: string,
+): { canPromote: boolean; reason?: string; maxRank?: string } {
+    // Find executor's rank
+    const executorRank: Rank | undefined = ranks.find(rank => executorMember.roles.cache.has(rank.discordRoleId));
+    if (!executorRank) {
+        return { canPromote: false, reason: 'You do not have a rank' };
+    }
+
+    // Find target rank
+    const targetRank = ranks.find(r => r.prefix === targetRankPrefix);
+    if (!targetRank) {
+        return { canPromote: false, reason: 'Invalid target rank' };
+    }
+
+    // Get executor and target rank indices (lower index = higher rank)
+    const executorIndex = ranks.findIndex(r => r.prefix === executorRank.prefix);
+    const targetIndex = ranks.findIndex(r => r.prefix === targetRankPrefix);
+
+    // Cannot promote to a rank equal or higher than your own
+    if (targetIndex <= executorIndex) {
+        return {
+            canPromote: false,
+            reason: `You cannot promote to ${targetRank.name} (equal or higher than your rank)`,
+        };
+    }
+
+    // Check if executor has a promotion limit
+    if (executorRank.maxPromoteToPrefix) {
+        const maxPromoteToIndex = ranks.findIndex(r => r.prefix === executorRank.maxPromoteToPrefix);
+
+        if (maxPromoteToIndex === -1) {
+            console.warn(`[perm] Invalid maxPromoteToPrefix for rank ${executorRank.name}: ${executorRank.maxPromoteToPrefix}`);
+            return { canPromote: false, reason: 'Invalid promotion configuration' };
+        }
+
+        // Target rank must be at or below the max promotion rank (higher index = lower rank)
+        if (targetIndex < maxPromoteToIndex) {
+            const maxRank = ranks[maxPromoteToIndex];
+            return {
+                canPromote: false,
+                reason: `Your rank can only promote up to ${maxRank.name}`,
+                maxRank: maxRank.name,
+            };
+        }
+    }
+
+    // If no maxPromoteToPrefix, can promote to any rank below their own
+    return { canPromote: true };
+}

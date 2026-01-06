@@ -3,6 +3,7 @@ import { BaseCommand } from '../../classes/BaseCommand';
 import ExtendedClient from '../../classes/Client';
 import { ranks } from '../../ranks/ranks';
 import { checkAndReplyPerms } from '../../ranks/permissionCheck';
+import { canPromoteToRank } from '../../ranks/permissions';
 
 // filepath: /home/admin/cafais/src/commands/ranking/promote.ts
 
@@ -91,6 +92,21 @@ class PromoteCommand extends BaseCommand {
             }
 
             const nextRank = ranks[currentRankIndex - 1];
+
+            // Check if executor can promote to this rank
+            const promotionCheck = canPromoteToRank(interaction.member as any, nextRank.prefix);
+            if (!promotionCheck.canPromote) {
+                const container = new ContainerBuilder();
+                const content = new TextDisplayBuilder().setContent(
+                    `# ❌ Insufficient Promotion Authority\n\n${promotionCheck.reason}`,
+                );
+                container.addTextDisplayComponents(content);
+                await interaction.editReply({
+                    flags: MessageFlags.IsComponentsV2,
+                    components: [container],
+                });
+                return;
+            }
 
             // Remove current rank and add next rank
             await member.roles.remove(currentRank.discordRoleId);
