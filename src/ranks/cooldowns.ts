@@ -26,7 +26,7 @@ export const rankRequirements: Record<string, RankRequirement> = {
     CH2: { cooldownDays: 2, minPoints: 60 },
     SPS: { cooldownDays: 2, minPoints: 50 },
     SSG: { cooldownDays: 2, minPoints: 40 },
-    SGT: { cooldownDays: , minPoints: 35 },
+    SGT: { cooldownDays: 21, minPoints: 35 },
     JSG: { cooldownDays: 21, minPoints: 25 },
 
     // Enlisted
