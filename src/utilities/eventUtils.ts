@@ -14,7 +14,7 @@ import * as path from 'path';
  * @throws Error if config file not found or invalid JSON
  */
 export function loadEventConfig(): EventPointsConfig {
-    const configPath = path.join(__dirname, '../config/eventConfig.json');
+    const configPath = path.join(process.cwd(), 'src/config/eventConfig.json');
     if (!fs.existsSync(configPath)) {
         throw new Error(`Event config file not found at ${configPath}`);
     }

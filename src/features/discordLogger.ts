@@ -13,6 +13,7 @@ import {
     SeparatorBuilder,
     SeparatorSpacingSize,
     Client,
+    APIMessageComponent,
 } from 'discord.js';
 import { EventLogData, AcademyLogData } from '../types/events';
 import { PromotionLogData, DemotionLogData } from '../types/ranking';
@@ -42,11 +43,11 @@ function formatDiscordTimestamp(date: Date): string {
 function formatDuration(durationMs: number): string {
     const hours = Math.floor(durationMs / (1000 * 60 * 60));
     const mins = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     const parts: string[] = [];
     if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
     if (mins > 0) parts.push(`${mins} minute${mins !== 1 ? 's' : ''}`);
-    
+
     return parts.join(' ') || '0 minutes';
 }
 
@@ -90,7 +91,7 @@ export async function logPromotion(client: Client, data: PromotionLogData): Prom
         container.addTextDisplayComponents(details);
 
         // Send container message
-        await channel.send({ components: container.components });
+        await channel.send({ components: container.components as unknown as APIMessageComponent[] });
     }
     catch (error) {
         console.error('[discordLogger] Failed to log promotion:', error);
@@ -137,7 +138,7 @@ export async function logDemotion(client: Client, data: DemotionLogData): Promis
         container.addTextDisplayComponents(details);
 
         // Send container message
-        await channel.send({ components: container.components });
+        await channel.send({ components: container.components as unknown as APIMessageComponent[] });
     }
     catch (error) {
         console.error('[discordLogger] Failed to log demotion:', error);
@@ -218,7 +219,7 @@ export async function logEvent(client: Client, data: EventLogData): Promise<void
         }
 
         // Send container message
-        await channel.send({ components: container.components });
+        await channel.send({ components: container.components as unknown as APIMessageComponent[] });
     }
     catch (error) {
         console.error('[discordLogger] Failed to log event:', error);
@@ -309,7 +310,7 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
         }
 
         // Send container message
-        await channel.send({ components: container.components });
+        await channel.send({ components: container.components as unknown as APIMessageComponent[] });
     }
     catch (error) {
         console.error('[discordLogger] Failed to log academy training:', error);
