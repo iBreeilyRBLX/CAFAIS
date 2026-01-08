@@ -9,7 +9,7 @@ import { GuildMember } from 'discord.js';
  * Role IDs for event-specific permissions
  */
 export const EVENT_ROLE_IDS = {
-    TRAINING_DEPARTMENT: '1454232274273959957',
+    TRAINING_DEPARTMENT: '1454539090832789638',
     LORE_DEPARTMENT: '1454232358814003341',
 } as const;
 

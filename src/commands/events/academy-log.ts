@@ -17,7 +17,7 @@ import { logAcademyTraining } from '../../features/discordLogger';
 import { Rank, PromotionRequest } from '../../types/ranking';
 import { AcademyLogData, ParticipantInfo } from '../../types/events';
 import { toggleParticipant, collectMembersWithRole, extractFailedParticipants, separatePassedAndFailed } from '../../utilities';
-import { findActiveEventByNameAndType, endEvent } from '../../services';
+import { endEvent } from '../../services';
 
 /**
  * Initiate rank role ID (for identifying who can be promoted)
@@ -132,19 +132,20 @@ class AcademyLogCommand extends BaseCommand {
         const imageLink = interaction.options.getString('image') || undefined;
 
         try {
-            // Find the most recent Academy Training event
-            const event = await findActiveEventByNameAndType(eventName, 'Academy Training');
+            // Find the most recent Academy Training event started by this user
+            const { findActiveEventByTypeAndHost } = await import('../../services');
+            const event = await findActiveEventByTypeAndHost('Academy Training', interaction.user.id);
 
             if (!event) {
                 await interaction.editReply({
-                    content: `❌ No active Academy Training event found with name **${eventName}**.\n` +
-                             'Make sure you started the event with `/start-event` first.',
+                    content: '❌ No active Academy Training event found that you started.\n' +
+                             'Make sure you started the event with \`/start-event\` first.',
                 });
                 return;
             }
 
-            // Collect base participants from voice channel (Initiates only)
-            let participants = collectMembersWithRole(channel, INITIATE_ROLE_ID).map(m => m.user);
+            // Collect base participants from voice channel (all members)
+            let participants = Array.from(channel.members.values()).map(m => m.user);
 
             // Process extra participants (toggle logic)
             for (let i = 1; i <= 5; i++) {
@@ -176,6 +177,9 @@ class AcademyLogCommand extends BaseCommand {
                 const targetMember = await interaction.guild?.members.fetch(user.id);
                 if (!targetMember) continue;
 
+                // Only promote members with the Initiate role
+                if (!targetMember.roles.cache.has(INITIATE_ROLE_ID)) continue;
+
                 promotionRequests.push({
                     targetMember,
                     targetUser: user,
@@ -183,7 +187,7 @@ class AcademyLogCommand extends BaseCommand {
                     fromRank: Rank.INT,
                     executorId: interaction.user.id,
                     executorUsername: interaction.user.username,
-                    reason: `Completed academy training: ${eventName}`,
+                    reason: 'Completed academy training',
                     // Academy promotions bypass cooldown and point requirements
                     bypassCooldown: true,
                     bypassPoints: true,

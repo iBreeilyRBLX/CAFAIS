@@ -13,7 +13,7 @@ import {
     SeparatorBuilder,
     SeparatorSpacingSize,
     Client,
-    APIMessageComponent,
+    MessageFlags,
 } from 'discord.js';
 import { EventLogData, AcademyLogData } from '../types/events';
 import { PromotionLogData, DemotionLogData } from '../types/ranking';
@@ -113,8 +113,8 @@ async function flushPromotionLogs(client: Client): Promise<void> {
         const title = new TextDisplayBuilder()
             .setContent(
                 logsToSend.length === 1
-                    ? '# 📈 Promotion Logged'
-                    : `# 📈 ${logsToSend.length} Promotions Logged`
+                    ? '# 📈 Promotion Log'
+                    : `# 📈 ${logsToSend.length} Promotions Log`,
             );
         container.addTextDisplayComponents(title);
 
@@ -150,25 +150,27 @@ async function flushPromotionLogs(client: Client): Promise<void> {
 
             // Group header
             const groupHeader = new TextDisplayBuilder()
-                .setContent(`**${transition}** (${logs.length} user${logs.length > 1 ? 's' : ''})`);
+                .setContent(`**${transition}**\n${logs.length} user${logs.length > 1 ? 's' : ''} promoted`);
             container.addTextDisplayComponents(groupHeader);
 
             // Individual promotions in this group
             for (const log of logs) {
                 const details = new TextDisplayBuilder()
                     .setContent(
-                        `• <@${log.userId}> (${log.userTag})\n` +
-                        `  Promoted by: <@${log.executorId}> (${log.executorUsername})\n` +
-                        `  Reason: ${log.reason || 'No reason provided'}\n` +
-                        `  Time: ${formatDiscordTimestamp(log.timestamp)}` +
-                        (log.pointsAwarded ? `\n  Points: ${log.pointsAwarded}` : '')
+                        `Promoted User: <@${log.userId}>\n` +
+                        `From: ${log.fromRank}\n` +
+                        `To: ${log.toRank}\n` +
+                        `By: <@${log.executorId}>\n` +
+                        `Reason: ${log.reason || 'No reason provided'}\n` +
+                        `Time: ${formatDiscordTimestamp(log.timestamp)}` +
+                        (log.pointsAwarded ? `\nPoints Awarded: +${log.pointsAwarded}` : ''),
                     );
                 container.addTextDisplayComponents(details);
             }
         }
 
         // Send container message
-        await channel.send({ components: container.components as unknown as APIMessageComponent[] });
+        await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2 });
     }
     catch (error) {
         console.error('[discordLogger] Failed to flush promotion logs:', error);
@@ -224,7 +226,7 @@ async function flushDemotionLogs(client: Client): Promise<void> {
             .setContent(
                 logsToSend.length === 1
                     ? '# 📉 Demotion Logged'
-                    : `# 📉 ${logsToSend.length} Demotions Logged`
+                    : `# 📉 ${logsToSend.length} Demotions Logged`,
             );
         container.addTextDisplayComponents(title);
 
@@ -270,14 +272,14 @@ async function flushDemotionLogs(client: Client): Promise<void> {
                         `• <@${log.userId}> (${log.userTag})\n` +
                         `  Demoted by: <@${log.executorId}> (${log.executorUsername})\n` +
                         `  Reason: ${log.reason}\n` +
-                        `  Time: ${formatDiscordTimestamp(log.timestamp)}`
+                        `  Time: ${formatDiscordTimestamp(log.timestamp)}`,
                     );
                 container.addTextDisplayComponents(details);
             }
         }
 
         // Send container message
-        await channel.send({ components: container.components as unknown as APIMessageComponent[] });
+        await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2 });
     }
     catch (error) {
         console.error('[discordLogger] Failed to flush demotion logs:', error);
@@ -360,7 +362,7 @@ export async function logEvent(client: Client, data: EventLogData): Promise<void
         }
 
         // Send container message
-        await channel.send({ components: container.components as unknown as APIMessageComponent[] });
+        await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2 });
     }
     catch (error) {
         console.error('[discordLogger] Failed to log event:', error);
@@ -385,7 +387,7 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
 
         // Title
         const title = new TextDisplayBuilder()
-            .setContent(`# 🎓 Academy Training: ${data.eventName}`);
+            .setContent(`# 🎓 ${data.eventName}`);
         container.addTextDisplayComponents(title);
 
         // Separator
@@ -420,12 +422,12 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
 
             const promotedList = data.participants
                 .filter(p => p.promoted)
-                .map(p => `✅ <@${p.discordId}> - Promoted to Private (2 points)`)
+                .map(p => `<@${p.discordId}>`)
                 .join('\n');
 
             const failedList = data.participants
                 .filter(p => p.failed)
-                .map(p => `❌ <@${p.discordId}> - Not Promoted (0 points)`)
+                .map(p => `❌ <@${p.discordId}> - Failed`)
                 .join('\n');
 
             let participantsContent = '**Participants:**\n';
@@ -451,7 +453,7 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
         }
 
         // Send container message
-        await channel.send({ components: container.components as unknown as APIMessageComponent[] });
+        await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2 });
     }
     catch (error) {
         console.error('[discordLogger] Failed to log academy training:', error);

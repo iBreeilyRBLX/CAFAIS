@@ -50,6 +50,19 @@ export async function findActiveEventByType(eventType: string) {
 }
 
 /**
+ * Finds the most recent active event by type and host
+ * @param eventType - Event type
+ * @param hostDiscordId - Discord ID of event host
+ * @returns Event object or null if not found
+ */
+export async function findActiveEventByTypeAndHost(eventType: string, hostDiscordId: string) {
+    return prisma.event.findFirst({
+        where: { eventType, eventHostDiscordId: hostDiscordId, endTime: null },
+        orderBy: { startTime: 'desc' },
+    });
+}
+
+/**
  * Ends an event and updates it in the database
  * @param eventId - Event ID (String UUID) to end
  * @param pointsAwarded - Points to award per participant
