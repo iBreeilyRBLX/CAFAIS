@@ -50,6 +50,7 @@ class TaseService {
                 },
                 signal: controller.signal,
             });
+            console.log(response);
 
             if (response.status === 404) {
                 return {

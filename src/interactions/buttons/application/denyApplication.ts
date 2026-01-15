@@ -30,19 +30,17 @@ const button: Button = {
         if (!guild) return;
 
         const member = await guild.members.fetch(applicantId).catch(() => null);
-        if (!member) {
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Error'));
-            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('Applicant not found.'));
-
-            await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
-            return;
-        }
 
         try {
-            // Defer interaction first
-            await interaction.deferUpdate();
+            if (!member) {
+                const container = new ContainerBuilder();
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Error'));
+                container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('Applicant not found.'));
+
+                await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [container] });
+                return;
+            }
 
             const now = new Date();
             const timestamp = now.toLocaleString('en-US', {
@@ -81,6 +79,8 @@ const button: Button = {
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`❌ **Denied by:** ${author.displayName}`));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
+
+            // Send confirmation message in public channel
             await interaction.followUp({ content: '❌ Application denied.', ephemeral: true });
 
             // Remove Applicant role
@@ -126,7 +126,7 @@ const button: Button = {
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent('An error occurred while denying the application.'));
 
-            await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
+            await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [container] });
         }
     },
 };

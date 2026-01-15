@@ -24,7 +24,7 @@
     },
     "include": [
         "src/**/*"
-    ],
+, "deprecated/mococoService.ts"    ],
     "exclude": [
         "node_modules",
         "dist"

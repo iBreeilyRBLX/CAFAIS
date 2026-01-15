@@ -106,7 +106,8 @@ const button: Button = {
             );
             container.addTextDisplayComponents(applicationInfo);
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
-            await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [container] });
+            await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
+            await interaction.followUp({ content: 'Application approved successfully.', ephemeral: true });
 
             // Update roles
             await member.roles.remove('1454532106565845064'); // Remove Applicant role

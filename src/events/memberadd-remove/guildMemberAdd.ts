@@ -1,4 +1,4 @@
-import { Events, GuildMember, TextChannel, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize } from 'discord.js';
+import { Events, GuildMember, TextChannel, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, MessageFlags } from 'discord.js';
 import { Event } from '../../interfaces';
 import ExtendedClient from '../../classes/Client';
 const event: Event = {
@@ -50,7 +50,7 @@ const event: Event = {
         // container.addTextDisplayComponents(footer);
 
         try {
-            await channel.send({ components: [container] });
+            await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2 });
         }
         catch (error) {
             console.error('Failed to send welcome message:', error);

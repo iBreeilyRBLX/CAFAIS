@@ -13,7 +13,6 @@ import {
 import { ModalSubmit } from '../../../interfaces';
 import prisma from '../../../database/prisma';
 import robloxGroupService from '../../../features/robloxGroupService';
-import mococoService from '../../../features/mococoService';
 import taseService from '../../../features/taseService';
 
 
@@ -122,7 +121,9 @@ const modalHandler: ModalSubmit = {
             ephemeral: true,
         });
 
-        // Function to estimate the application outcome, e.g., approve, deny, guest (If has guest of visitor in the reason then estimate guest. if for age is anything above 13 then approve else deny. For above 13 define it as any number higher then 13 or them stating anything with Y in it (as a way of saying yes))
+        // Perform TASE safety check on the user
+        const taseCheckResult = await taseService.checkUser(interaction.user.id);
+
         const estimateApplicationOutcome = (reason: string, ageResponse: string): 'approve' | 'deny' | 'guest' => {
             // Check if the reason contains keywords for guest status
             const reasonLower = reason.toLowerCase();
@@ -186,6 +187,35 @@ const modalHandler: ModalSubmit = {
         container.addTextDisplayComponents(outcome);
         const separator1 = new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true });
         container.addSeparatorComponents(separator1);
+
+        /**
+         * Build TASE Safety Check display
+         * Shows whether the user has been flagged in the TASE database
+         * and displays any matched flags with their emoji indicators
+         */
+        const taseEmoji = taseCheckResult.safe ? '✅' : '⚠️';
+        const taseHeader = new TextDisplayBuilder().setContent(
+            `${taseEmoji} **TASE Check:** ${taseCheckResult.description}`,
+        );
+        container.addTextDisplayComponents(taseHeader);
+
+        // Add matched flags if any exist
+        if (taseCheckResult.results.length > 0 && !taseCheckResult.safe) {
+            const flagsContent = taseCheckResult.results
+                .filter((r) => r.matched)
+                .map((r) => `${r.emoji} ${r.name}`)
+                .join('\n');
+
+            if (flagsContent) {
+                const flagsDisplay = new TextDisplayBuilder().setContent(
+                    `**Matched Flags:**\n${flagsContent}`,
+                );
+                container.addTextDisplayComponents(flagsDisplay);
+            }
+        }
+
+        const separatorTase = new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true });
+        container.addSeparatorComponents(separatorTase);
 
         const approveButton = new DjsButtonBuilder()
             .setCustomId(`approveApplication_${interaction.user.id}`)
