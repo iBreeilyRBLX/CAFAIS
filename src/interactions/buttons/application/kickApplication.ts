@@ -40,6 +40,9 @@ const button: Button = {
         }
 
         try {
+            // Defer interaction first
+            await interaction.deferUpdate();
+
             const now = new Date();
             const timestamp = now.toLocaleString('en-US', {
                 year: 'numeric',
@@ -69,8 +72,7 @@ const button: Button = {
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👢 **Action taken by:** ${author.displayName}`));
 
-            await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
-            await interaction.followUp({ content: '👢 Member kicked.', ephemeral: true });
+            await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [container] });
 
             const dmContainer = new ContainerBuilder();
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('# 👢 You Have Been Kicked'));

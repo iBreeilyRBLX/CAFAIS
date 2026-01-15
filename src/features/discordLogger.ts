@@ -29,7 +29,8 @@ export const LOG_CHANNELS = {
 /**
  * Batching configuration
  */
-const BATCH_FLUSH_DELAY_MS = 10000; // 10 seconds
+// 10 seconds
+const BATCH_FLUSH_DELAY_MS = 10000;
 
 /**
  * Buffer for batching promotion logs
@@ -132,7 +133,8 @@ async function flushPromotionLogs(client: Client): Promise<void> {
             if (!groupedByRank.has(key)) {
                 groupedByRank.set(key, []);
             }
-            groupedByRank.get(key)!.push(log);
+            const arr = groupedByRank.get(key);
+            if (arr) arr.push(log);
         }
 
         // Build content for each group
@@ -244,7 +246,8 @@ async function flushDemotionLogs(client: Client): Promise<void> {
             if (!groupedByRank.has(key)) {
                 groupedByRank.set(key, []);
             }
-            groupedByRank.get(key)!.push(log);
+            const arr = groupedByRank.get(key);
+            if (arr) arr.push(log);
         }
 
         // Build content for each group
@@ -412,7 +415,7 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
             );
         container.addTextDisplayComponents(details);
 
-        // Participants list with status
+        // Participants list with emojis (✅ passed Initiate, ❌ failed Initiate, • others)
         if (data.participants.length > 0) {
             const separator2 = new SeparatorBuilder({
                 spacing: SeparatorSpacingSize.Small,
@@ -420,22 +423,16 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
             });
             container.addSeparatorComponents(separator2);
 
-            const promotedList = data.participants
-                .filter(p => p.promoted)
-                .map(p => `<@${p.discordId}>`)
+            const participantsList = data.participants
+                .map(p => {
+                    if (p.promoted) return `✅ <@${p.discordId}>`;
+                    if (p.failed) return `❌ <@${p.discordId}> - Failed`;
+                    return `<@${p.discordId}>`;
+                })
                 .join('\n');
-
-            const failedList = data.participants
-                .filter(p => p.failed)
-                .map(p => `❌ <@${p.discordId}> - Failed`)
-                .join('\n');
-
-            let participantsContent = '**Participants:**\n';
-            if (promotedList) participantsContent += promotedList + '\n';
-            if (failedList) participantsContent += failedList;
 
             const participantsText = new TextDisplayBuilder()
-                .setContent(participantsContent);
+                .setContent(`**Participants:**\n${participantsList}`);
             container.addTextDisplayComponents(participantsText);
         }
 

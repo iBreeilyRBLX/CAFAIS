@@ -294,7 +294,7 @@ async function validatePromotion(request: PromotionRequest): Promise<PromotionRe
  * @param client - Discord client instance
  * @param request - Promotion request details
  * @returns Promotion result
- * 
+ *
  * @example
  * const result = await promoteUser(client, {
  *   targetMember: member,
@@ -323,7 +323,7 @@ export async function promoteUser(
         try {
             await updateRankRoles(targetMember, fromRank, toRank);
         }
-    catch (error) {
+        catch (error) {
             console.error('[rankingManager] Role update failed:', error);
             return {
                 status: PromotionStatus.ROLE_ERROR,
@@ -397,3 +397,4 @@ export async function batchPromoteUsers(
 
     return results;
 }
+

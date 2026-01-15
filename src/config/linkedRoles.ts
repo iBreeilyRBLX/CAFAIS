@@ -33,7 +33,7 @@ export const linkedRoleSets: LinkedRoleSet[] = [
     // HICOM roles
     {
         parentRoleId: '1454232274273959957',
-        parentRoleName: 'CASF Personal',
+        parentRoleName: 'High command Personal',
         childRoleIds: [
             '1454231933994274900', // Bot Developer
             '1454231103425613874', // Prime Executive
@@ -84,6 +84,17 @@ export const linkedRoleSets: LinkedRoleSet[] = [
             '1454248763915898971', // Initiate
         ],
         description: 'Enlisted ranks',
+    },
+    {
+        parentRoleId: '1454533624379605096',
+        parentRoleName: 'CASF Personal',
+        childRoleIds: [
+            '1454248973824033039', // Enlisted
+            '1454248254555295856', // NCO
+            '1454247683815506163', // Officers
+            '1454232274273959957', // High com
+        ],
+        description: 'Events Team Roles',
     },
     // {
     //     parentRoleId: '1454640375305211975',

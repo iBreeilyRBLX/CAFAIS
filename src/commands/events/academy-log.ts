@@ -16,7 +16,7 @@ import { batchPromoteUsers } from '../../features/rankingManager';
 import { logAcademyTraining } from '../../features/discordLogger';
 import { Rank, PromotionRequest } from '../../types/ranking';
 import { AcademyLogData, ParticipantInfo } from '../../types/events';
-import { toggleParticipant, collectMembersWithRole, extractFailedParticipants, separatePassedAndFailed } from '../../utilities';
+import { toggleParticipant, extractFailedParticipants } from '../../utilities';
 import { endEvent } from '../../services';
 
 /**
@@ -139,7 +139,7 @@ class AcademyLogCommand extends BaseCommand {
             if (!event) {
                 await interaction.editReply({
                     content: '❌ No active Academy Training event found that you started.\n' +
-                             'Make sure you started the event with \`/start-event\` first.',
+                             'Make sure you started the event with `/start-event` first.',
                 });
                 return;
             }
@@ -155,8 +155,8 @@ class AcademyLogCommand extends BaseCommand {
                 }
             }
 
-            // Collect failed participants
-            const failedParticipants = extractFailedParticipants(interaction);
+            // Collect failed participants from options (IDs only; will filter to Initiates below)
+            const failedParticipantIds = extractFailedParticipants(interaction);
 
             if (participants.length === 0) {
                 await interaction.editReply({
@@ -165,20 +165,34 @@ class AcademyLogCommand extends BaseCommand {
                 return;
             }
 
-            // Separate participants into passed and failed
-            const { passed: passedParticipants, failed: failedUsers } = separatePassedAndFailed(
-                participants,
-                failedParticipants,
-            );
+            // Helper: check if a user is an Initiate using VC members cache or guild fetch
+            const isInitiate = async (userId: string): Promise<boolean> => {
+                const cachedMember = channel.members.get(userId);
+                const targetMember = cachedMember ?? await interaction.guild?.members.fetch(userId).catch(() => null);
+                return !!targetMember && targetMember.roles.cache.has(INITIATE_ROLE_ID);
+            };
+
+            // Determine failed Initiates (ignore fail marks for non-Initiates)
+            const failedInitiatesIds = new Set<string>();
+            for (const userId of failedParticipantIds) {
+                if (await isInitiate(userId) && participants.some(p => p.id === userId)) {
+                    failedInitiatesIds.add(userId);
+                }
+            }
+
+            // Determine passed Initiates: in participants, Initiate, and not failed
+            const passedInitiates: typeof participants = [];
+            for (const user of participants) {
+                if (await isInitiate(user.id) && !failedInitiatesIds.has(user.id)) {
+                    passedInitiates.push(user);
+                }
+            }
 
             // Prepare promotion requests for passed participants
             const promotionRequests: PromotionRequest[] = [];
-            for (const user of passedParticipants) {
-                const targetMember = await interaction.guild?.members.fetch(user.id);
+            for (const user of passedInitiates) {
+                const targetMember = channel.members.get(user.id) ?? await interaction.guild?.members.fetch(user.id).catch(() => null);
                 if (!targetMember) continue;
-
-                // Only promote members with the Initiate role
-                if (!targetMember.roles.cache.has(INITIATE_ROLE_ID)) continue;
 
                 promotionRequests.push({
                     targetMember,
@@ -201,57 +215,54 @@ class AcademyLogCommand extends BaseCommand {
             // Award points to passed participants
             const participantInfos: ParticipantInfo[] = [];
 
-            for (const user of passedParticipants) {
-                // Create or update user profile with points
-                await prisma.userProfile.upsert({
-                    where: { discordId: user.id },
-                    update: {
-                        username: user.username,
-                        discriminator: user.discriminator || '0',
-                        points: { increment: ACADEMY_PASS_POINTS },
-                    },
-                    create: {
-                        discordId: user.id,
-                        username: user.username,
-                        discriminator: user.discriminator || '0',
-                        points: ACADEMY_PASS_POINTS,
-                    },
-                });
+            // Build Prisma operations for atomicity
+            type TxOp = ReturnType<typeof prisma.userProfile.upsert> | ReturnType<typeof prisma.eventParticipant.upsert>;
+            const prismaOps: TxOp[] = [];
 
-                // Create event participant record
-                await prisma.eventParticipant.upsert({
-                    where: { eventId_userDiscordId: { eventId: event.id, userDiscordId: user.id } },
-                    update: { points: ACADEMY_PASS_POINTS },
-                    create: { eventId: event.id, userDiscordId: user.id, points: ACADEMY_PASS_POINTS },
-                });
+            // Profiles for passed Initiates
+            for (const user of passedInitiates) {
+                prismaOps.push(
+                    prisma.userProfile.upsert({
+                        where: { discordId: user.id },
+                        update: {
+                            username: user.username,
+                            discriminator: user.discriminator || '0',
+                            points: { increment: ACADEMY_PASS_POINTS },
+                        },
+                        create: {
+                            discordId: user.id,
+                            username: user.username,
+                            discriminator: user.discriminator || '0',
+                            points: ACADEMY_PASS_POINTS,
+                        },
+                    }),
+                );
+            }
+
+            // Event participant records for all VC participants (Initiates get points if passed; others 0)
+            for (const user of participants) {
+                const points = passedInitiates.some(u => u.id === user.id) ? ACADEMY_PASS_POINTS : 0;
+                prismaOps.push(
+                    prisma.eventParticipant.upsert({
+                        where: { eventId_userDiscordId: { eventId: event.id, userDiscordId: user.id } },
+                        update: { points },
+                        create: { eventId: event.id, userDiscordId: user.id, points },
+                    }),
+                );
 
                 participantInfos.push({
                     user,
                     discordId: user.id,
                     username: user.username,
                     promoted: successfulPromotions.some(r => r.userId === user.id),
-                    failed: false,
-                    points: ACADEMY_PASS_POINTS,
+                    failed: failedInitiatesIds.has(user.id),
+                    points,
                 });
             }
 
-            // Create event participant records for failed participants (no points)
-            for (const user of failedUsers) {
-                await prisma.eventParticipant.upsert({
-                    where: { eventId_userDiscordId: { eventId: event.id, userDiscordId: user.id } },
-                    update: { points: 0 },
-                    create: { eventId: event.id, userDiscordId: user.id, points: 0 },
-                });
-
-                // Add to participant info
-                participantInfos.push({
-                    user,
-                    discordId: user.id,
-                    username: user.username,
-                    promoted: false,
-                    failed: true,
-                    points: 0,
-                });
+            // Execute DB ops in a transaction
+            if (prismaOps.length > 0) {
+                await prisma.$transaction(prismaOps);
             }
 
             // Update event as completed
@@ -274,7 +285,7 @@ class AcademyLogCommand extends BaseCommand {
                 notes,
                 imageLink,
                 promotedCount: successfulPromotions.length,
-                failedCount: failedUsers.length,
+                failedCount: failedInitiatesIds.size,
             };
 
             await logAcademyTraining(client, logData);
@@ -283,8 +294,8 @@ class AcademyLogCommand extends BaseCommand {
             await interaction.editReply({
                 content: `✅ **Academy Training Logged: ${eventName}**\n\n` +
                          `**Promoted to Private:** ${successfulPromotions.length} (2 points each)\n` +
-                         `**Failed:** ${failedUsers.length} (0 points)\n` +
-                         `**Total Participants:** ${participantInfos.length}\n\n` +
+                         `**Failed (Initiates only):** ${failedInitiatesIds.size} (0 points)\n` +
+                         `**Total Participants:** ${participants.length}\n\n` +
                          'Event logged to <#1454639394605498449>',
             });
         }

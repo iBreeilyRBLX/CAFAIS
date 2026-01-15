@@ -43,6 +43,9 @@ const button: Button = {
         }
 
         try {
+            // Defer interaction first
+            await interaction.deferUpdate();
+
             const verifiedUser = await prisma.verifiedUser.findUnique({ where: { discordId: applicantId } });
             if (!verifiedUser) {
                 const container = new ContainerBuilder();
@@ -85,9 +88,14 @@ const button: Button = {
             });
 
             const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# 📋 Application Review'));
-            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ✅ Application Approved.')); // application approved
+            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: false }));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
+            const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
+            const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername}) ([View Profile](${robloxProfile}))`));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox Group:** ${groupResultText}`));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`✍️ **Approved by:** ${author.displayName}`));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
 
             // Show original application details
@@ -97,20 +105,8 @@ const button: Button = {
                 `**Are they above 13?** ${application.age}`,
             );
             container.addTextDisplayComponents(applicationInfo);
-
-            // Show approval decision
-            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ✅ Application Approved'));
-            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: false }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
-            const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
-            const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername}) ([View Profile](${robloxProfile}))`));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox Group:** ${groupResultText}`));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`✍️ **Approved by:** ${author.displayName}`));
-
-            await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
-            await interaction.followUp({ content: '✅ Application approved successfully!', ephemeral: true });
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
+            await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [container] });
 
             // Update roles
             await member.roles.remove('1454532106565845064'); // Remove Applicant role

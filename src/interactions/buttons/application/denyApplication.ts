@@ -41,6 +41,9 @@ const button: Button = {
         }
 
         try {
+            // Defer interaction first
+            await interaction.deferUpdate();
+
             const now = new Date();
             const timestamp = now.toLocaleString('en-US', {
                 year: 'numeric',
@@ -56,9 +59,7 @@ const button: Button = {
             const verifiedUser = await prisma.verifiedUser.findUnique({ where: { discordId: applicantId } });
 
             const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# 📋 Application Review'));
-            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('#  Application denied.'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
             if (verifiedUser) {
@@ -67,6 +68,15 @@ const button: Button = {
                 container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername}) ([View Profile](${robloxProfile}))`));
             }
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent('The application has been denied.'));
+
+            // Show original application details
+            const applicationInfo = new TextDisplayBuilder().setContent(
+                `**Why are you applying?**\n\`\`\`\n${application.applicationReason}\n\`\`\`\n\n` +
+                `**Where did you find us?** ${application.foundServer}\n` +
+                `**Are they above 13?** ${application.age}`,
+            );
+            container.addTextDisplayComponents(applicationInfo);
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`❌ **Denied by:** ${author.displayName}`));
 

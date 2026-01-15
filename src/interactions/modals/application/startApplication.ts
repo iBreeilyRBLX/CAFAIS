@@ -13,6 +13,9 @@ import {
 import { ModalSubmit } from '../../../interfaces';
 import prisma from '../../../database/prisma';
 import robloxGroupService from '../../../features/robloxGroupService';
+import mococoService from '../../../features/mococoService';
+import taseService from '../../../features/taseService';
+
 
 const modalHandler: ModalSubmit = {
     name: 'applicationModal',
@@ -54,6 +57,9 @@ const modalHandler: ModalSubmit = {
             });
             return;
         }
+
+        // Defer reply immediately to prevent timeout
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         let hasPendingJoinRequestOrMember = false;
         try {
@@ -111,6 +117,11 @@ const modalHandler: ModalSubmit = {
             return;
         }
 
+        await interaction.followUp({
+            content: 'Your application is being submitted for review...',
+            ephemeral: true,
+        });
+
         // Function to estimate the application outcome, e.g., approve, deny, guest (If has guest of visitor in the reason then estimate guest. if for age is anything above 13 then approve else deny. For above 13 define it as any number higher then 13 or them stating anything with Y in it (as a way of saying yes))
         const estimateApplicationOutcome = (reason: string, ageResponse: string): 'approve' | 'deny' | 'guest' => {
             // Check if the reason contains keywords for guest status
@@ -136,6 +147,7 @@ const modalHandler: ModalSubmit = {
             // If we can't determine from the above criteria, default to deny for safety
             return 'deny';
         };
+
 
         const estimatedOutcome = estimateApplicationOutcome(applicationReason, age);
         const submissionAttempt = (existingApplication?.submissionCount ?? 0) + 1;
@@ -237,9 +249,8 @@ const modalHandler: ModalSubmit = {
             console.error('[ERROR] Failed to send application message:', error);
         }
 
-        await interaction.reply({
-            content: 'Your application has been submitted for review!',
-            ephemeral: true,
+        await interaction.editReply({
+            content: 'Your application has been submitted successfully!',
         });
     },
 };
