@@ -31,12 +31,15 @@ const button: Button = {
 
         const member = await guild.members.fetch(applicantId).catch(() => null);
         if (!member) {
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Error'));
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ❌ Error'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('Applicant not found.'));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:** Applicant not found in server.\n**Action:** User may have left the server.'));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
+            return;
         }
 
         try {
@@ -46,49 +49,69 @@ const button: Button = {
 
             // Get verified user info for Roblox details
             const verifiedUser = await prisma.verifiedUser.findUnique({ where: { discordId: applicantId } });
+            const robloxDisplayName = verifiedUser?.robloxDisplayName || verifiedUser?.robloxUsername;
+            const robloxProfile = verifiedUser ? `https://www.roblox.com/users/${verifiedUser.robloxId}/profile` : null;
 
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# 📋 Application Review'));
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## Application Denied - User Banned'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
-            if (verifiedUser) {
-                const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
-                const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
-                container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername}) ([View Profile](${robloxProfile}))`));
-            }
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('The applicant has been banned for application denial.'));
+            
+            // Applicant information
+            const applicantInfo = `**Applicant:** ${member.user.tag} (<@${member.user.id}>)`;
+            const robloxInfo = verifiedUser ? `\n**Roblox:** ${robloxDisplayName} (@${verifiedUser.robloxUsername}) • [Profile](${robloxProfile})` : '';
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(applicantInfo + robloxInfo));
+            
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🔨 **Action taken by:** ${author.displayName}`));
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Action:** Applicant has been permanently banned from the server.`
+            ));
+            
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Actioned by:** ${author.displayName}\n` +
+                `**Timestamp:** ${timestamp}`
+            ));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
 
-            const dmContainer = new ContainerBuilder();
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('# 🔨 You Have Been Banned'));
+            const dmContainer = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('## You Have Been Banned'));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`<@${applicantId}>, your application was denied and you have been banned from the server.`));
+            
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `<@${applicantId}>, your application was denied and you have been permanently banned from the server.\n\n` +
+                `You may appeal this decision through the appropriate channels.`
+            ));
+            
             if (verifiedUser) {
-                const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
-                const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
+                dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
                 dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                    `👤 **Discord:** ${member.user.tag}\n` +
-                    `🎮 **Roblox:** ${robloxDisplayName}\n` +
-                    `🔗 [View Profile](${robloxProfile})`,
+                    `**Your Accounts**\n` +
+                    `**Discord:** ${member.user.tag}\n` +
+                    `**Roblox:** ${robloxDisplayName}\n` +
+                    `[View Profile](${robloxProfile})`
                 ));
             }
+            
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('📋 **Your Application:**'));
+            
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Submission #:** ${application.submissionCount}\n` +
-                `**Reason:** \`\`\`\n${application.applicationReason}\n\`\`\``,
+                `**Your Application (Submission #${application.submissionCount})**\n\n` +
+                `**Reason**\n\`\`\`\n${application.applicationReason}\n\`\`\``
             ));
+            
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('You may appeal this ban in the future.'));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🔨 **Action taken by:** ${author.displayName}`));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Banned:** ${timestamp}`));
+            
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Actioned by:** ${author.displayName}\n` +
+                `**Timestamp:** ${timestamp}`
+            ));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] }).catch(() => null);
             await guild.bans.create(applicantId, { reason: 'Application denied during review' });
@@ -104,10 +127,12 @@ const button: Button = {
         }
         catch (error) {
             console.error(error);
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Ban Failed'));
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ❌ Ban Failed'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('An error occurred while banning the applicant.'));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:** An error occurred while banning the applicant.\n**Action:** Please try again or contact an administrator.'));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
         }

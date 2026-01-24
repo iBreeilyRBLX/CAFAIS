@@ -302,7 +302,7 @@ class MassPromoteCommand extends BaseCommand {
                 }
             }
 
-            let successContent = '## ✅ Successful Promotions\n\n';
+            let successContent = '## Successful Promotions\n\n';
             for (const [transition, users] of groupedByTransition.entries()) {
                 successContent += `**${transition}** (${users.length})\n`;
                 for (const user of users) {

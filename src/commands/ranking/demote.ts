@@ -159,7 +159,7 @@ class DemoteCommand extends BaseCommand {
             const container = new ContainerBuilder()
                 .setAccentColor(0xE67E22);
             const content = new TextDisplayBuilder().setContent(
-                '## ⚠️ Demotion Successful\n\n' +
+                '## Demotion Successful\n\n' +
                 `**User:** ${targetUser.username}\n` +
                 `**From:** ${currentRank.name}\n` +
                 `**To:** ${nextRank.name}\n\n` +

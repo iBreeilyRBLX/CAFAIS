@@ -327,7 +327,7 @@ class AcademyLogCommand extends BaseCommand {
 
             // Send success message
             await interaction.editReply({
-                content: `✅ **Academy Training Logged: ${eventName}**\n\n` +
+                content: `**Academy Training Logged: ${eventName}**\n\n` +
                          `**Promoted to Private:** ${successfulPromotions.length} (2 points each)\n` +
                          `**Failed (Initiates only):** ${failedInitiatesIds.size} (0 points)\n` +
                          `**Total Participants:** ${participants.length}\n\n` +

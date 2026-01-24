@@ -31,12 +31,15 @@ const button: Button = {
 
         const member = await guild.members.fetch(applicantId).catch(() => null);
         if (!member) {
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Error'));
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ❌ Error'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('Applicant not found.'));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:** Applicant not found in server.\n**Action:** User may have left the server.'));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
+            return;
         }
 
         try {
@@ -46,49 +49,69 @@ const button: Button = {
 
             // Get verified user info for Roblox details
             const verifiedUser = await prisma.verifiedUser.findUnique({ where: { discordId: applicantId } });
+            const robloxDisplayName = verifiedUser?.robloxDisplayName || verifiedUser?.robloxUsername;
+            const robloxProfile = verifiedUser ? `https://www.roblox.com/users/${verifiedUser.robloxId}/profile` : null;
 
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# 📋 Application Review'));
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE67E22);
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## Application Denied - User Kicked'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
-            if (verifiedUser) {
-                const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
-                const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
-                container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername}) ([View Profile](${robloxProfile}))`));
-            }
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('The applicant has been kicked for application denial.'));
+            
+            // Applicant information
+            const applicantInfo = `**Applicant:** ${member.user.tag} (<@${member.user.id}>)`;
+            const robloxInfo = verifiedUser ? `\n**Roblox:** ${robloxDisplayName} (@${verifiedUser.robloxUsername}) • [Profile](${robloxProfile})` : '';
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(applicantInfo + robloxInfo));
+            
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👢 **Action taken by:** ${author.displayName}`));
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Action:** Applicant has been kicked from the server.`
+            ));
+            
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Actioned by:** ${author.displayName}\n` +
+                `**Timestamp:** ${timestamp}`
+            ));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
 
-            const dmContainer = new ContainerBuilder();
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('# 👢 You Have Been Kicked'));
+            const dmContainer = new ContainerBuilder()
+                .setAccentColor(0xE67E22);
+            
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('## You Have Been Kicked'));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`<@${applicantId}>, your application was denied and you have been kicked from the server.`));
+            
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `<@${applicantId}>, your application was denied and you have been kicked from the server.\n\n` +
+                `You may reapply after some time once you meet the requirements.`
+            ));
+            
             if (verifiedUser) {
-                const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
-                const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
+                dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
                 dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                    `👤 **Discord:** ${member.user.tag}\n` +
-                    `🎮 **Roblox:** ${robloxDisplayName}\n` +
-                    `🔗 [View Profile](${robloxProfile})`,
+                    `**Your Accounts**\n` +
+                    `**Discord:** ${member.user.tag}\n` +
+                    `**Roblox:** ${robloxDisplayName}\n` +
+                    `[View Profile](${robloxProfile})`
                 ));
             }
+            
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('📋 **Your Application:**'));
+            
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Submission #:** ${application.submissionCount}\n` +
-                `**Reason:** \`\`\`\n${application.applicationReason}\n\`\`\``,
+                `**Your Application (Submission #${application.submissionCount})**\n\n` +
+                `**Reason**\n\`\`\`\n${application.applicationReason}\n\`\`\``
             ));
+            
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('You may reapply after some time.'));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👢 **Action taken by:** ${author.displayName}`));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Kicked:** ${timestamp}`));
+            
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Actioned by:** ${author.displayName}\n` +
+                `**Timestamp:** ${timestamp}`
+            ));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] }).catch(() => null);
             await member.kick('Application denied during review');
@@ -104,10 +127,12 @@ const button: Button = {
         }
         catch (error) {
             console.error(error);
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Kick Failed'));
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ❌ Kick Failed'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('An error occurred while kicking the applicant.'));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:** An error occurred while kicking the applicant.\n**Action:** Please try again or contact an administrator.'));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
         }

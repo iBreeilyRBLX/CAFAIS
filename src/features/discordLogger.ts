@@ -160,27 +160,27 @@ async function flushPromotionLogs(client: Client): Promise<void> {
                 container.addSeparatorComponents(separator);
             }
 
-            // Group header with emoji
+            // Group header
             const groupHeader = new TextDisplayBuilder()
-                .setContent(`### ⬆️ ${transition}\n*${logs.length} ${logs.length > 1 ? 'promotions' : 'promotion'}*`);
+                .setContent(`### ${transition}\n*${logs.length} ${logs.length > 1 ? 'promotions' : 'promotion'}*`);
             container.addTextDisplayComponents(groupHeader);
 
             // Individual promotions in this group
             let promotionsList = '';
             for (const log of logs) {
                 promotionsList += `**<@${log.userId}>**\n`;
-                promotionsList += `├ 👤 By: <@${log.executorId}>\n`;
-                promotionsList += `├ 📝 Reason: *${log.reason || 'No reason provided'}*\n`;
-                promotionsList += `├ 🕐 ${formatDiscordTimestamp(log.timestamp)}`;
+                promotionsList += `├ By: <@${log.executorId}>\n`;
+                promotionsList += `├ Reason: *${log.reason || 'No reason provided'}*\n`;
+                promotionsList += `├ ${formatDiscordTimestamp(log.timestamp)}`;
                 if (log.pointsAwarded) {
-                    promotionsList += `\n└ ⭐ Points: **+${log.pointsAwarded}**`;
+                    promotionsList += `\n└ Points: **+${log.pointsAwarded}**`;
                 }
                 else {
                     promotionsList += '\n';
                 }
                 promotionsList += '\n\n';
             }
-            
+
             const details = new TextDisplayBuilder()
                 .setContent(promotionsList.trim());
             container.addTextDisplayComponents(details);
@@ -287,20 +287,20 @@ async function flushDemotionLogs(client: Client): Promise<void> {
                 container.addSeparatorComponents(separator);
             }
 
-            // Group header with emoji
+            // Group header
             const groupHeader = new TextDisplayBuilder()
-                .setContent(`### ⬇️ ${transition}\n*${logs.length} ${logs.length > 1 ? 'demotions' : 'demotion'}*`);
+                .setContent(`### ${transition}\n*${logs.length} ${logs.length > 1 ? 'demotions' : 'demotion'}*`);
             container.addTextDisplayComponents(groupHeader);
 
             // Individual demotions in this group
             let demotionsList = '';
             for (const log of logs) {
                 demotionsList += `**<@${log.userId}>** *(${log.userTag})*\n`;
-                demotionsList += `├ 👤 By: <@${log.executorId}> (${log.executorUsername})\n`;
-                demotionsList += `├ 📝 Reason: *${log.reason}*\n`;
-                demotionsList += `└ 🕐 ${formatDiscordTimestamp(log.timestamp)}\n\n`;
+                demotionsList += `├ By: <@${log.executorId}> (${log.executorUsername})\n`;
+                demotionsList += `├ Reason: *${log.reason}*\n`;
+                demotionsList += `└ ${formatDiscordTimestamp(log.timestamp)}\n\n`;
             }
-            
+
             const details = new TextDisplayBuilder()
                 .setContent(demotionsList.trim());
             container.addTextDisplayComponents(details);
@@ -337,7 +337,7 @@ export async function logEvent(client: Client, data: EventLogData): Promise<void
         // Create header container with yellow accent for events (0xF39C12)
         const headerContainer = new ContainerBuilder()
             .setAccentColor(0xF39C12);
-        
+
         const eventTitle = new TextDisplayBuilder()
             .setContent(`## ${data.eventName}`);
         headerContainer.addTextDisplayComponents(eventTitle);
@@ -352,13 +352,13 @@ export async function logEvent(client: Client, data: EventLogData): Promise<void
         const duration = data.durationMs ? formatDuration(data.durationMs) : 'N/A';
         const details = new TextDisplayBuilder()
             .setContent(
-                `**📋 Type:** ${data.eventType}\n` +
-                `**👤 Host:** <@${data.hostId}> (${data.hostUsername})\n` +
-                `**🕐 Started:** ${formatDiscordTimestamp(data.startTime)}\n` +
-                (data.endTime ? `**🕐 Ended:** ${formatDiscordTimestamp(data.endTime)}\n` : '') +
-                `**⏱️ Duration:** ${duration}\n` +
-                `**👥 Participants:** ${data.participants.length}` +
-                (data.pointsAwarded !== undefined ? `\n**⭐ Points:** ${data.pointsAwarded} per participant` : ''),
+                `**Type:** ${data.eventType}\n` +
+                `**Host:** <@${data.hostId}> (${data.hostUsername})\n` +
+                `**Started:** ${formatDiscordTimestamp(data.startTime)}\n` +
+                (data.endTime ? `**Ended:** ${formatDiscordTimestamp(data.endTime)}\n` : '') +
+                `**Duration:** ${duration}\n` +
+                `**Participants:** ${data.participants.length}` +
+                (data.pointsAwarded !== undefined ? `\n**Points:** ${data.pointsAwarded} per participant` : ''),
             );
         headerContainer.addTextDisplayComponents(details);
 
@@ -371,7 +371,7 @@ export async function logEvent(client: Client, data: EventLogData): Promise<void
             headerContainer.addSeparatorComponents(notesSeparator);
 
             const notesText = new TextDisplayBuilder()
-                .setContent(`**📝 Notes:**\n*${data.notes}*`);
+                .setContent(`**Notes:**\n*${data.notes}*`);
             headerContainer.addTextDisplayComponents(notesText);
         }
 
@@ -382,7 +382,7 @@ export async function logEvent(client: Client, data: EventLogData): Promise<void
                 .setAccentColor(0x3498DB);
 
             const participantsTitle = new TextDisplayBuilder()
-                .setContent('## 👥 Event Participants');
+                .setContent('## Event Participants');
             participantsContainer.addTextDisplayComponents(participantsTitle);
 
             const participantsSeparator = new SeparatorBuilder({
@@ -446,7 +446,7 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
         // Create header container with accent color (blue for academy - 0x3498DB)
         const headerContainer = new ContainerBuilder()
             .setAccentColor(0x3498DB);
-        
+
         const eventTitle = new TextDisplayBuilder()
             .setContent(`## ${data.eventName}`);
         headerContainer.addTextDisplayComponents(eventTitle);
@@ -461,10 +461,10 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
         const duration = data.durationMs ? formatDuration(data.durationMs) : 'N/A';
         const hostInfo = new TextDisplayBuilder()
             .setContent(
-                `**👤 Host:** <@${data.hostId}> (${data.hostUsername})\n` +
-                `**🕐 Started:** ${formatDiscordTimestamp(data.startTime)}\n` +
-                (data.endTime ? `**🕐 Ended:** ${formatDiscordTimestamp(data.endTime)}\n` : '') +
-                `**⏱️ Duration:** ${duration}`,
+                `**Host:** <@${data.hostId}> (${data.hostUsername})\n` +
+                `**Started:** ${formatDiscordTimestamp(data.startTime)}\n` +
+                (data.endTime ? `**Ended:** ${formatDiscordTimestamp(data.endTime)}\n` : '') +
+                `**Duration:** ${duration}`,
             );
         headerContainer.addTextDisplayComponents(hostInfo);
 
@@ -473,7 +473,7 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
             .setAccentColor(0x2ECC71);
 
         const statsTitle = new TextDisplayBuilder()
-            .setContent('## 📊 Training Results');
+            .setContent('## Training Results');
         statsContainer.addTextDisplayComponents(statsTitle);
 
         const statsSeparator = new SeparatorBuilder({
@@ -484,10 +484,10 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
 
         const stats = new TextDisplayBuilder()
             .setContent(
-                `**👥 Total Participants:** ${data.participants.length}\n` +
-                `**✅ Promoted to Private:** ${data.promotedCount} (2 points each)\n` +
-                `**❌ Failed:** ${data.failedCount} (0 points)\n` +
-                `**⭐ Points Awarded:** ${data.promotedCount * 2}`,
+                `**Total Participants:** ${data.participants.length}\n` +
+                `**Promoted to Private:** ${data.promotedCount} (2 points each)\n` +
+                `**Failed:** ${data.failedCount} (0 points)\n` +
+                `**Points Awarded:** ${data.promotedCount * 2}`,
             );
         statsContainer.addTextDisplayComponents(stats);
 
@@ -496,7 +496,7 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
             .setAccentColor(0x9B59B6);
 
         const participantsTitle = new TextDisplayBuilder()
-            .setContent('## 👥 Participants Breakdown');
+            .setContent('## Participants Breakdown');
         participantsContainer.addTextDisplayComponents(participantsTitle);
 
         const participantsSeparator = new SeparatorBuilder({
@@ -513,19 +513,19 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
             let participantContent = '';
 
             if (promotedList.length > 0) {
-                participantContent += `**✅ Promoted (${promotedList.length}):**\n`;
+                participantContent += `**Promoted (${promotedList.length}):**\n`;
                 participantContent += promotedList.map(p => `• <@${p.discordId}> (+${p.points} pts)`).join('\n');
                 participantContent += '\n\n';
             }
 
             if (failedList.length > 0) {
-                participantContent += `**❌ Failed (${failedList.length}):**\n`;
+                participantContent += `**Failed (${failedList.length}):**\n`;
                 participantContent += failedList.map(p => `• <@${p.discordId}>`).join('\n');
                 participantContent += '\n\n';
             }
 
             if (otherList.length > 0) {
-                participantContent += `**👤 Other Attendees (${otherList.length}):**\n`;
+                participantContent += `**Other Attendees (${otherList.length}):**\n`;
                 participantContent += otherList.map(p => `• <@${p.discordId}>`).join('\n');
             }
 
@@ -541,7 +541,7 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
                 .setAccentColor(0xE67E22);
 
             const notesTitle = new TextDisplayBuilder()
-                .setContent('## 📝 Additional Information');
+                .setContent('## Additional Information');
             notesContainer.addTextDisplayComponents(notesTitle);
 
             const notesSeparator = new SeparatorBuilder({

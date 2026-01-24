@@ -33,10 +33,12 @@ const button: Button = {
 
         try {
             if (!member) {
-                const container = new ContainerBuilder();
-                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Error'));
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ❌ Error'));
                 container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('Applicant not found.'));
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:** Applicant not found in server.\n**Action:** User may have left the server.'));
 
                 await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [container] });
                 return;
@@ -47,63 +49,76 @@ const button: Button = {
 
             // Get verified user info for Roblox details
             const verifiedUser = await prisma.verifiedUser.findUnique({ where: { discordId: applicantId } });
+            const robloxDisplayName = verifiedUser?.robloxDisplayName || verifiedUser?.robloxUsername;
+            const robloxProfile = verifiedUser ? `https://www.roblox.com/users/${verifiedUser.robloxId}/profile` : null;
 
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('#  Application denied.'));
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## Application Denied'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
-            if (verifiedUser) {
-                const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
-                const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
-                container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername}) ([View Profile](${robloxProfile}))`));
-            }
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('The application has been denied.'));
-
-            // Show original application details
-            const applicationInfo = new TextDisplayBuilder().setContent(
-                `**Why are you applying?**\n\`\`\`\n${application.applicationReason}\n\`\`\`\n\n` +
-                `**Where did you find us?** ${application.foundServer}\n` +
-                `**Are they above 13?** ${application.age}`,
-            );
-            container.addTextDisplayComponents(applicationInfo);
+            
+            // Applicant information
+            const applicantInfo = `**Applicant:** ${member.user.tag} (<@${member.user.id}>)`;
+            const robloxInfo = verifiedUser ? `\n**Roblox:** ${robloxDisplayName} (@${verifiedUser.robloxUsername}) • [Profile](${robloxProfile})` : '';
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(applicantInfo + robloxInfo));
+            
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`❌ **Denied by:** ${author.displayName}`));
+            
+            // Application details
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Application Reason**\n\`\`\`\n${application.applicationReason}\n\`\`\`\n\n` +
+                `**Found us via:** ${application.foundServer}\n` +
+                `**Age verification:** ${application.age}`,
+            ));
+            
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
+            
+            // Denial metadata
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Denied by:** ${author.displayName}\n` +
+                `**Timestamp:** ${timestamp}`,
+            ));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
 
             // Send confirmation message in public channel
-            await interaction.followUp({ content: '❌ Application denied.', ephemeral: true });
+            await interaction.followUp({ content: 'Application denied.', ephemeral: true });
 
-            // Remove Applicant role
-            // await member.roles.remove('1454532106565845064');
-
-            const dmContainer = new ContainerBuilder();
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ❌ Application Denied'));
+            const dmContainer = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('## Application Denied'));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`<@${applicantId}>, your application has been denied.`));
+            
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `<@${applicantId}>, your application has been denied.\n\n` +
+                'You may reapply in the future after reviewing our requirements.',
+            ));
+            
             if (verifiedUser) {
-                const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
-                const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
+                dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
                 dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                    `👤 **Discord:** ${member.user.tag}\n` +
-                    `🎮 **Roblox:** ${robloxDisplayName}\n` +
-                    `🔗 [View Profile](${robloxProfile})`,
+                    '**Your Accounts**\n' +
+                    `**Discord:** ${member.user.tag}\n` +
+                    `**Roblox:** ${robloxDisplayName}\n` +
+                    `[View Profile](${robloxProfile})`,
                 ));
             }
+            
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('📋 **Your Application:**'));
+            
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Submission #:** ${application.submissionCount}\n` +
-                `**Reason:** \`\`\`\n${application.applicationReason}\n\`\`\``,
+                `**Your Application (Submission #${application.submissionCount})**\n\n` +
+                `**Reason**\n\`\`\`\n${application.applicationReason}\n\`\`\``,
             ));
+            
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('You may reapply in the future.'));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`❌ **Denied by:** ${author.displayName}`));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Denied:** ${timestamp}`));
+            
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Denied by:** ${author.displayName}\n` +
+                `**Timestamp:** ${timestamp}`,
+            ));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] }).catch(() => null);
 

@@ -66,7 +66,7 @@ class AdjustPointsCommand extends BaseCommand {
 
             const container = new ContainerBuilder()
                 .setAccentColor(0x3498DB);
-            const title = new TextDisplayBuilder().setContent('## ✅ Points Adjusted Successfully');
+            const title = new TextDisplayBuilder().setContent('## Points Adjusted Successfully');
             container.addTextDisplayComponents(title);
 
             const details = new TextDisplayBuilder().setContent(

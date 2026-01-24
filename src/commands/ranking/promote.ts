@@ -124,7 +124,7 @@ class PromoteCommand extends BaseCommand {
                 const container = new ContainerBuilder()
                     .setAccentColor(0x2ECC71);
                 const content = new TextDisplayBuilder().setContent(
-                    '## ✅ Promotion Successful\n\n' +
+                    '## Promotion Successful\n\n' +
                     `**User:** ${targetUser.username}\n` +
                     `**From:** ${currentRank.name}\n` +
                     `**To:** ${getRankByPrefix(nextRankPrefix)?.name}\n\n` +

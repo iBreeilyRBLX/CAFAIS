@@ -2,6 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, ContainerBuilder, Tex
 import { BaseCommand } from '../../classes/BaseCommand';
 import ExtendedClient from '../../classes/Client';
 import robloxVerificationService from '../../features/robloxVerificationService';
+import { CUSTOM_EMOJIS } from '../../config/emojis';
 
 
 class VerifyCommand extends BaseCommand {
@@ -121,18 +122,16 @@ class VerifyCommand extends BaseCommand {
                 }
             }
             const container = new ContainerBuilder();
-            const title = new TextDisplayBuilder().setContent('# ✅ Verification Updated');
+            const title = new TextDisplayBuilder().setContent('# Verification Updated');
             container.addTextDisplayComponents(title);
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            let successMessage = `**Your Discord nickname has been updated!**\n\n**New Nickname**\n${newNickname}\n\n**Roblox Account**\n${robloxUser.displayName} (@${robloxUser.name})`;
+            let successMessage = `**Your Discord nickname has been updated!**\n\n**New Nickname**\n${newNickname}\n\n${CUSTOM_EMOJIS.roblox.default} **Roblox Account**\n${robloxUser.displayName} (@${robloxUser.name})`;
             if (nicknameUpdateFailed) {
-                successMessage = `**Verification Status**\n\nYour Discord account is linked to:\n**${robloxUser.displayName}** (@${robloxUser.name})\n\n⚠️ **Nickname Update Failed:** ${nicknameError}`;
+                successMessage = `**Verification Status**\n\n${CUSTOM_EMOJIS.discord.default} Your Discord account is linked to:\n${CUSTOM_EMOJIS.roblox.default} **${robloxUser.displayName}** (@${robloxUser.name})\n\n**Nickname Update Failed:** ${nicknameError}`;
             }
             const content = new TextDisplayBuilder().setContent(successMessage);
             container.addTextDisplayComponents(content);
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            const footer = new TextDisplayBuilder().setContent('*Always Forward, Never Turning Back*');
-            container.addTextDisplayComponents(footer);
             await interaction.editReply({
                 flags: MessageFlags.IsComponentsV2,
                 components: [container],
@@ -144,13 +143,13 @@ class VerifyCommand extends BaseCommand {
         const authData = await robloxVerificationService.generateAuthorizationUrl(userId, userTag);
         const discordOAuthUrl = robloxVerificationService.generateDiscordAuthUrl(authData.stateToken);
         const container = new ContainerBuilder();
-        const title = new TextDisplayBuilder().setContent('# 🔐 Dual OAuth Verification');
+        const title = new TextDisplayBuilder().setContent('# Dual OAuth Verification');
         container.addTextDisplayComponents(title);
         container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-        const intro = new TextDisplayBuilder().setContent('To verify your account, you need to authenticate with **both Discord and Roblox** OAuth.\n\nThis ensures you own both accounts and links them securely.');
+        const intro = new TextDisplayBuilder().setContent(`To verify your account, you need to authenticate with **both ${CUSTOM_EMOJIS.discord.default} Discord and ${CUSTOM_EMOJIS.roblox.default} Roblox** OAuth.\n\nThis ensures you own both accounts and links them securely.`);
         container.addTextDisplayComponents(intro);
         container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: false }));
-        const steps = new TextDisplayBuilder().setContent('**Step 1️⃣ Discord OAuth**\nVerify you own this Discord account\n\n**Step 2️⃣ Roblox OAuth**\nLink your Roblox profile and display name\n\n**Step 3️⃣ Done!**\nYour Discord nickname will automatically update to your Roblox display name.');
+        const steps = new TextDisplayBuilder().setContent(`**Step 1️⃣ ${CUSTOM_EMOJIS.discord.default} Discord OAuth**\nVerify you own this Discord account\n\n**Step 2️⃣ ${CUSTOM_EMOJIS.roblox.default} Roblox OAuth**\nLink your Roblox profile and display name\n\n**Step 3️⃣ Done!**\nYour Discord nickname will automatically update to your Roblox display name.`);
         container.addTextDisplayComponents(steps);
         container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
         const footer = new TextDisplayBuilder().setContent('Click the button below to start the verification process.');
