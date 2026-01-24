@@ -12,8 +12,8 @@ const DEMOTION_LOG_CHANNEL_ID = configJSON.channels.promotionLogs;
 type DemotionLogDetails = {
     executorId: string;
     executorTag: string; // username, not deprecated tag
-    promotedId: string;
-    promotedTag: string; // username, not deprecated tag
+    demotedId: string;
+    demotedTag: string; // username, not deprecated tag
     fromRank: string;
     toRank: string;
     reason: string;
@@ -52,8 +52,9 @@ class DemoteCommand extends BaseCommand {
             const member = await interaction.guild?.members.fetch(targetUser.id);
 
             if (!member) {
-                const container = new ContainerBuilder();
-                const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nCould not fetch member data.');
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                const content = new TextDisplayBuilder().setContent('## ❌ Error\n\nCould not fetch member data. Please try again.');
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
                     flags: MessageFlags.IsComponentsV2,
@@ -66,8 +67,9 @@ class DemoteCommand extends BaseCommand {
             const currentRank = ranks.find(rank => member.roles.cache.has(rank.discordRoleId));
 
             if (!currentRank) {
-                const container = new ContainerBuilder();
-                const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nUser has no rank.');
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                const content = new TextDisplayBuilder().setContent('## ❌ Error\n\n**Issue:** User has no rank assigned.\n**Action:** Please assign a rank first.');
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
                     flags: MessageFlags.IsComponentsV2,
@@ -79,10 +81,11 @@ class DemoteCommand extends BaseCommand {
             // Find current rank index
             const currentRankIndex = ranks.findIndex(rank => rank.discordRoleId === currentRank.discordRoleId);
 
-            // Check if user is at max rank
-            if (currentRankIndex === 0) {
-                const container = new ContainerBuilder();
-                const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nUser is already at maximum rank.');
+            // Check if user is at minimum rank
+            if (currentRankIndex === ranks.length - 1) {
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                const content = new TextDisplayBuilder().setContent('## ❌ Cannot Demote\n\n**Reason:** User is already at minimum rank.\n**Current Rank:** ' + currentRank.name);
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
                     flags: MessageFlags.IsComponentsV2,
@@ -93,12 +96,25 @@ class DemoteCommand extends BaseCommand {
 
             const nextRank = ranks[currentRankIndex + 1];
 
+            if (!nextRank) {
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                const content = new TextDisplayBuilder().setContent('## ❌ Error\n\n**Issue:** Could not determine next rank.\n**Action:** Contact an administrator.');
+                container.addTextDisplayComponents(content);
+                await interaction.editReply({
+                    flags: MessageFlags.IsComponentsV2,
+                    components: [container],
+                });
+                return;
+            }
+
             // Check if executor can promote to this rank
             const demotionCheck = canPromoteToRank(interaction.member as GuildMember, nextRank.prefix);
             if (!demotionCheck.canPromote) {
-                const container = new ContainerBuilder();
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
                 const content = new TextDisplayBuilder().setContent(
-                    `# ❌ Insufficient Demotion Authority\n\n${demotionCheck.reason}`,
+                    `## 🚫 Insufficient Authority\n\n**Reason:**\n${demotionCheck.reason}`,
                 );
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
@@ -133,16 +149,21 @@ class DemoteCommand extends BaseCommand {
             await this.logDemotion(client, {
                 executorId: interaction.user.id,
                 executorTag: interaction.user.username,
-                promotedId: targetUser.id,
-                promotedTag: targetUser.username,
+                demotedId: targetUser.id,
+                demotedTag: targetUser.username,
                 fromRank: currentRank.name,
                 toRank: nextRank.name,
                 reason,
             });
 
-            const container = new ContainerBuilder();
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE67E22);
             const content = new TextDisplayBuilder().setContent(
-                `# ✅ Demotion Successful\n\n${targetUser.username} has been demoted from **${currentRank.name}** to **${nextRank.name}**.`,
+                '## ⚠️ Demotion Successful\n\n' +
+                `**User:** ${targetUser.username}\n` +
+                `**From:** ${currentRank.name}\n` +
+                `**To:** ${nextRank.name}\n\n` +
+                `**Reason:** *${reason}*`,
             );
             container.addTextDisplayComponents(content);
             await interaction.editReply({
@@ -151,9 +172,10 @@ class DemoteCommand extends BaseCommand {
             });
         }
         catch (error) {
-            console.error('Error in /promote command:', error);
-            const container = new ContainerBuilder();
-            const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nAn error occurred during promotion. Please try again.');
+            console.error('Error in /demote command:', error);
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            const content = new TextDisplayBuilder().setContent('## ❌ Unexpected Error\n\n**Issue:** An error occurred during demotion.\n**Action:** Please try again or contact an administrator.');
             container.addTextDisplayComponents(content);
             await interaction.editReply({
                 flags: MessageFlags.IsComponentsV2,
@@ -170,7 +192,7 @@ class DemoteCommand extends BaseCommand {
         container.addTextDisplayComponents(title);
 
         const body = new TextDisplayBuilder().setContent(
-            '**Demoted User:** <@' + details.promotedId + '> (' + details.promotedTag + ')\n' +
+            '**Demoted User:** <@' + details.demotedId + '> (' + details.demotedTag + ')\n' +
             '**From:** ' + details.fromRank + '\n' +
             '**To:** ' + details.toRank + '\n' +
             '**By:** <@' + details.executorId + '> (' + details.executorTag + ')\n' +

@@ -23,8 +23,9 @@ class VerifyCommand extends BaseCommand {
         catch (error) {
             // Log the error for debugging
             console.error('Error in /verify command:', error);
-            const container = new ContainerBuilder();
-            const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nAn error occurred. Please try again.');
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            const content = new TextDisplayBuilder().setContent('## ❌ Verification Error\n\n**Issue:** An error occurred during verification.\n**Action:** Please try again.');
             container.addTextDisplayComponents(content);
             await interaction.editReply({
                 flags: MessageFlags.IsComponentsV2,
@@ -52,8 +53,9 @@ class VerifyCommand extends BaseCommand {
         if (isVerified) {
             const member = await interaction.guild?.members.fetch(userId);
             if (!member) {
-                const container = new ContainerBuilder();
-                const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nCould not fetch member data.');
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                const content = new TextDisplayBuilder().setContent('## ❌ Error\n\n**Issue:** Could not fetch member data.\n**Action:** Please try again or contact support.');
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
                     flags: MessageFlags.IsComponentsV2,
@@ -63,8 +65,9 @@ class VerifyCommand extends BaseCommand {
             }
             const robloxUser = await robloxVerificationService.getVerifiedUser(userId);
             if (!robloxUser) {
-                const container = new ContainerBuilder();
-                const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nCould not retrieve verification data.');
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                const content = new TextDisplayBuilder().setContent('## ❌ Verification Error\n\n**Issue:** Could not retrieve verification data.\n**Action:** Please verify again.');
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
                     flags: MessageFlags.IsComponentsV2,
@@ -84,8 +87,9 @@ class VerifyCommand extends BaseCommand {
             }
             const newNickname = robloxUser.displayName;
             if (newNickname.length > 32) {
-                const container = new ContainerBuilder();
-                const content = new TextDisplayBuilder().setContent(`# ❌ Nickname Too Long\n\n"${newNickname}" exceeds Discord's 32 character limit.`);
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                const content = new TextDisplayBuilder().setContent(`## ❌ Nickname Issue\n\n**Problem:** "${newNickname}" exceeds Discord's 32 character limit.\n**Action:** Please update your Roblox display name.`);
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
                     flags: MessageFlags.IsComponentsV2,

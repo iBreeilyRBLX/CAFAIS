@@ -331,7 +331,7 @@ class AcademyLogCommand extends BaseCommand {
                          `**Promoted to Private:** ${successfulPromotions.length} (2 points each)\n` +
                          `**Failed (Initiates only):** ${failedInitiatesIds.size} (0 points)\n` +
                          `**Total Participants:** ${participants.length}\n\n` +
-                         `Event logged to <#${configJSON.channels.eventLogs}>`,
+                         'Event logged to <#1454639944348864574>',
             });
         }
         catch (error) {

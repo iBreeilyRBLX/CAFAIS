@@ -109,18 +109,27 @@ async function flushPromotionLogs(client: Client): Promise<void> {
         promotionBuffer.length = 0;
         promotionFlushTimer = null;
 
-        const container = new ContainerBuilder();
-
-        // Title based on count
-        const title = new TextDisplayBuilder()
+        // Main title
+        const titleDisplay = new TextDisplayBuilder()
             .setContent(
                 logsToSend.length === 1
                     ? '# 📈 Promotion Log'
-                    : `# 📈 ${logsToSend.length} Promotions Log`,
+                    : '# 📈 Batch Promotion Log',
             );
-        container.addTextDisplayComponents(title);
 
-        // Separator
+        // Create main container with green accent for success (0x2ECC71)
+        const container = new ContainerBuilder()
+            .setAccentColor(0x2ECC71);
+
+        // Summary header
+        const summary = new TextDisplayBuilder()
+            .setContent(
+                '## Promotion Summary\n' +
+                `**Total Promotions:** ${logsToSend.length}\n` +
+                `**Recorded:** ${formatDiscordTimestamp(new Date())}`,
+            );
+        container.addTextDisplayComponents(summary);
+
         const separator1 = new SeparatorBuilder({
             spacing: SeparatorSpacingSize.Small,
             divider: true,
@@ -151,25 +160,30 @@ async function flushPromotionLogs(client: Client): Promise<void> {
                 container.addSeparatorComponents(separator);
             }
 
-            // Group header
+            // Group header with emoji
             const groupHeader = new TextDisplayBuilder()
-                .setContent(`**${transition}**\n${logs.length} user${logs.length > 1 ? 's' : ''} promoted`);
+                .setContent(`### ⬆️ ${transition}\n*${logs.length} ${logs.length > 1 ? 'promotions' : 'promotion'}*`);
             container.addTextDisplayComponents(groupHeader);
 
             // Individual promotions in this group
+            let promotionsList = '';
             for (const log of logs) {
-                const details = new TextDisplayBuilder()
-                    .setContent(
-                        `Promoted User: <@${log.userId}>\n` +
-                        `From: ${log.fromRank}\n` +
-                        `To: ${log.toRank}\n` +
-                        `By: <@${log.executorId}>\n` +
-                        `Reason: ${log.reason || 'No reason provided'}\n` +
-                        `Time: ${formatDiscordTimestamp(log.timestamp)}` +
-                        (log.pointsAwarded ? `\nPoints Awarded: +${log.pointsAwarded}` : ''),
-                    );
-                container.addTextDisplayComponents(details);
+                promotionsList += `**<@${log.userId}>**\n`;
+                promotionsList += `├ 👤 By: <@${log.executorId}>\n`;
+                promotionsList += `├ 📝 Reason: *${log.reason || 'No reason provided'}*\n`;
+                promotionsList += `├ 🕐 ${formatDiscordTimestamp(log.timestamp)}`;
+                if (log.pointsAwarded) {
+                    promotionsList += `\n└ ⭐ Points: **+${log.pointsAwarded}**`;
+                }
+                else {
+                    promotionsList += '\n';
+                }
+                promotionsList += '\n\n';
             }
+            
+            const details = new TextDisplayBuilder()
+                .setContent(promotionsList.trim());
+            container.addTextDisplayComponents(details);
         }
 
         // Send container message
@@ -222,18 +236,27 @@ async function flushDemotionLogs(client: Client): Promise<void> {
         demotionBuffer.length = 0;
         demotionFlushTimer = null;
 
-        const container = new ContainerBuilder();
-
-        // Title based on count
-        const title = new TextDisplayBuilder()
+        // Main title
+        const titleDisplay = new TextDisplayBuilder()
             .setContent(
                 logsToSend.length === 1
-                    ? '# 📉 Demotion Logged'
-                    : `# 📉 ${logsToSend.length} Demotions Logged`,
+                    ? '# 📉 Demotion Log'
+                    : '# 📉 Batch Demotion Log',
             );
-        container.addTextDisplayComponents(title);
 
-        // Separator
+        // Create main container with red accent for demotions (0xE74C3C)
+        const container = new ContainerBuilder()
+            .setAccentColor(0xE74C3C);
+
+        // Summary header
+        const summary = new TextDisplayBuilder()
+            .setContent(
+                '## Demotion Summary\n' +
+                `**Total Demotions:** ${logsToSend.length}\n` +
+                `**Recorded:** ${formatDiscordTimestamp(new Date())}`,
+            );
+        container.addTextDisplayComponents(summary);
+
         const separator1 = new SeparatorBuilder({
             spacing: SeparatorSpacingSize.Small,
             divider: true,
@@ -264,26 +287,27 @@ async function flushDemotionLogs(client: Client): Promise<void> {
                 container.addSeparatorComponents(separator);
             }
 
-            // Group header
+            // Group header with emoji
             const groupHeader = new TextDisplayBuilder()
-                .setContent(`**${transition}** (${logs.length} user${logs.length > 1 ? 's' : ''})`);
+                .setContent(`### ⬇️ ${transition}\n*${logs.length} ${logs.length > 1 ? 'demotions' : 'demotion'}*`);
             container.addTextDisplayComponents(groupHeader);
 
             // Individual demotions in this group
+            let demotionsList = '';
             for (const log of logs) {
-                const details = new TextDisplayBuilder()
-                    .setContent(
-                        `• <@${log.userId}> (${log.userTag})\n` +
-                        `  Demoted by: <@${log.executorId}> (${log.executorUsername})\n` +
-                        `  Reason: ${log.reason}\n` +
-                        `  Time: ${formatDiscordTimestamp(log.timestamp)}`,
-                    );
-                container.addTextDisplayComponents(details);
+                demotionsList += `**<@${log.userId}>** *(${log.userTag})*\n`;
+                demotionsList += `├ 👤 By: <@${log.executorId}> (${log.executorUsername})\n`;
+                demotionsList += `├ 📝 Reason: *${log.reason}*\n`;
+                demotionsList += `└ 🕐 ${formatDiscordTimestamp(log.timestamp)}\n\n`;
             }
+            
+            const details = new TextDisplayBuilder()
+                .setContent(demotionsList.trim());
+            container.addTextDisplayComponents(details);
         }
 
-        // Send container message
-        await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2 });
+        // Send message with title and container
+        await channel.send({ components: [titleDisplay, container], flags: MessageFlags.IsComponentsV2 });
     }
     catch (error) {
         console.error('[discordLogger] Failed to flush demotion logs:', error);
@@ -306,67 +330,98 @@ export async function logEvent(client: Client, data: EventLogData): Promise<void
             throw new Error(`Events log channel ${LOG_CHANNELS.EVENTS} not found or invalid`);
         }
 
-        const container = new ContainerBuilder();
+        // Main title
+        const titleDisplay = new TextDisplayBuilder()
+            .setContent('# 🎯 Event Completed');
 
-        // Title
-        const title = new TextDisplayBuilder()
-            .setContent(`# 🎯 Event: ${data.eventName}`);
-        container.addTextDisplayComponents(title);
+        // Create header container with yellow accent for events (0xF39C12)
+        const headerContainer = new ContainerBuilder()
+            .setAccentColor(0xF39C12);
+        
+        const eventTitle = new TextDisplayBuilder()
+            .setContent(`## ${data.eventName}`);
+        headerContainer.addTextDisplayComponents(eventTitle);
 
-        // Separator
-        const separator1 = new SeparatorBuilder({
+        const headerSeparator = new SeparatorBuilder({
             spacing: SeparatorSpacingSize.Small,
             divider: true,
         });
-        container.addSeparatorComponents(separator1);
+        headerContainer.addSeparatorComponents(headerSeparator);
 
-        // Event details
+        // Event details with emojis
         const duration = data.durationMs ? formatDuration(data.durationMs) : 'N/A';
         const details = new TextDisplayBuilder()
             .setContent(
-                `**Event Type:** ${data.eventType}\n` +
-                `**Host:** <@${data.hostId}> (${data.hostUsername})\n` +
-                `**Started:** ${formatDiscordTimestamp(data.startTime)}\n` +
-                (data.endTime ? `**Ended:** ${formatDiscordTimestamp(data.endTime)}\n` : '') +
-                `**Duration:** ${duration}\n` +
-                `**Participants:** ${data.participants.length}\n` +
-                (data.pointsAwarded !== undefined ? `**Points Awarded:** ${data.pointsAwarded} per participant\n` : '') +
-                (data.notes ? `**Notes:** ${data.notes}\n` : ''),
+                `**📋 Type:** ${data.eventType}\n` +
+                `**👤 Host:** <@${data.hostId}> (${data.hostUsername})\n` +
+                `**🕐 Started:** ${formatDiscordTimestamp(data.startTime)}\n` +
+                (data.endTime ? `**🕐 Ended:** ${formatDiscordTimestamp(data.endTime)}\n` : '') +
+                `**⏱️ Duration:** ${duration}\n` +
+                `**👥 Participants:** ${data.participants.length}` +
+                (data.pointsAwarded !== undefined ? `\n**⭐ Points:** ${data.pointsAwarded} per participant` : ''),
             );
-        container.addTextDisplayComponents(details);
+        headerContainer.addTextDisplayComponents(details);
 
-        // Participants list
-        if (data.participants.length > 0) {
-            const separator2 = new SeparatorBuilder({
+        // Notes in separate section if present
+        if (data.notes) {
+            const notesSeparator = new SeparatorBuilder({
                 spacing: SeparatorSpacingSize.Small,
                 divider: true,
             });
-            container.addSeparatorComponents(separator2);
+            headerContainer.addSeparatorComponents(notesSeparator);
+
+            const notesText = new TextDisplayBuilder()
+                .setContent(`**📝 Notes:**\n*${data.notes}*`);
+            headerContainer.addTextDisplayComponents(notesText);
+        }
+
+        // Create participants container with blue accent (0x3498DB)
+        let participantsContainer: ContainerBuilder | null = null;
+        if (data.participants.length > 0) {
+            participantsContainer = new ContainerBuilder()
+                .setAccentColor(0x3498DB);
+
+            const participantsTitle = new TextDisplayBuilder()
+                .setContent('## 👥 Event Participants');
+            participantsContainer.addTextDisplayComponents(participantsTitle);
+
+            const participantsSeparator = new SeparatorBuilder({
+                spacing: SeparatorSpacingSize.Small,
+                divider: true,
+            });
+            participantsContainer.addSeparatorComponents(participantsSeparator);
 
             const participantsList = data.participants
-                .map(p => `• <@${p.discordId}> - ${p.points} points`)
+                .map(p => `• <@${p.discordId}> — **${p.points}** pts`)
                 .join('\n');
 
             const participantsText = new TextDisplayBuilder()
-                .setContent(`**Participant List:**\n${participantsList}`);
-            container.addTextDisplayComponents(participantsText);
+                .setContent(participantsList);
+            participantsContainer.addTextDisplayComponents(participantsText);
         }
 
-        // Image if provided
+        // Create image container if provided (orange accent - 0xE67E22)
+        let imageContainer: ContainerBuilder | null = null;
         if (data.imageLink) {
-            const separator3 = new SeparatorBuilder({
-                spacing: SeparatorSpacingSize.Small,
-                divider: true,
-            });
-            container.addSeparatorComponents(separator3);
+            imageContainer = new ContainerBuilder()
+                .setAccentColor(0xE67E22);
 
             const imageText = new TextDisplayBuilder()
-                .setContent(`**Event Image:** [View Image](${data.imageLink})`);
-            container.addTextDisplayComponents(imageText);
+                .setContent(`## 📷 Event Media\n[View Event Image](${data.imageLink})`);
+            imageContainer.addTextDisplayComponents(imageText);
         }
 
-        // Send container message
-        await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2 });
+        // Assemble all components
+        const components = [titleDisplay, headerContainer];
+        if (participantsContainer) {
+            components.push(participantsContainer);
+        }
+        if (imageContainer) {
+            components.push(imageContainer);
+        }
+
+        // Send message with all containers
+        await channel.send({ components, flags: MessageFlags.IsComponentsV2 });
     }
     catch (error) {
         console.error('[discordLogger] Failed to log event:', error);
@@ -382,76 +437,145 @@ export async function logEvent(client: Client, data: EventLogData): Promise<void
  */
 export async function logAcademyTraining(client: Client, data: AcademyLogData): Promise<void> {
     try {
-        const channel = await client.channels.fetch(LOG_CHANNELS.EVENTS);
+        const TRAINING_LOG_CHANNEL = '1454639944348864574';
+        const channel = await client.channels.fetch(TRAINING_LOG_CHANNEL);
         if (!channel || !(channel instanceof TextChannel)) {
-            throw new Error(`Events log channel ${LOG_CHANNELS.EVENTS} not found or invalid`);
+            throw new Error(`Training log channel ${TRAINING_LOG_CHANNEL} not found or invalid`);
         }
 
-        const container = new ContainerBuilder();
+        // Create header container with accent color (blue for academy - 0x3498DB)
+        const headerContainer = new ContainerBuilder()
+            .setAccentColor(0x3498DB);
+        
+        const eventTitle = new TextDisplayBuilder()
+            .setContent(`## ${data.eventName}`);
+        headerContainer.addTextDisplayComponents(eventTitle);
 
-        // Title
-        const title = new TextDisplayBuilder()
-            .setContent(`# 🎓 ${data.eventName}`);
-        container.addTextDisplayComponents(title);
-
-        // Separator
-        const separator1 = new SeparatorBuilder({
+        const headerSeparator = new SeparatorBuilder({
             spacing: SeparatorSpacingSize.Small,
             divider: true,
         });
-        container.addSeparatorComponents(separator1);
+        headerContainer.addSeparatorComponents(headerSeparator);
 
-        // Event details
+        // Host and timing information
         const duration = data.durationMs ? formatDuration(data.durationMs) : 'N/A';
-        const details = new TextDisplayBuilder()
+        const hostInfo = new TextDisplayBuilder()
             .setContent(
-                `**Host:** <@${data.hostId}> (${data.hostUsername})\n` +
-                `**Started:** ${formatDiscordTimestamp(data.startTime)}\n` +
-                (data.endTime ? `**Ended:** ${formatDiscordTimestamp(data.endTime)}\n` : '') +
-                `**Duration:** ${duration}\n` +
-                `**Total Participants:** ${data.participants.length}\n` +
-                `**Promoted to Private:** ${data.promotedCount}\n` +
-                `**Failed:** ${data.failedCount}\n` +
-                (data.notes ? `**Notes:** ${data.notes}\n` : ''),
+                `**👤 Host:** <@${data.hostId}> (${data.hostUsername})\n` +
+                `**🕐 Started:** ${formatDiscordTimestamp(data.startTime)}\n` +
+                (data.endTime ? `**🕐 Ended:** ${formatDiscordTimestamp(data.endTime)}\n` : '') +
+                `**⏱️ Duration:** ${duration}`,
             );
-        container.addTextDisplayComponents(details);
+        headerContainer.addTextDisplayComponents(hostInfo);
 
-        // Participants list with emojis (✅ passed Initiate, ❌ failed Initiate, • others)
+        // Create stats container with accent color (green for success - 0x2ECC71)
+        const statsContainer = new ContainerBuilder()
+            .setAccentColor(0x2ECC71);
+
+        const statsTitle = new TextDisplayBuilder()
+            .setContent('## 📊 Training Results');
+        statsContainer.addTextDisplayComponents(statsTitle);
+
+        const statsSeparator = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        statsContainer.addSeparatorComponents(statsSeparator);
+
+        const stats = new TextDisplayBuilder()
+            .setContent(
+                `**👥 Total Participants:** ${data.participants.length}\n` +
+                `**✅ Promoted to Private:** ${data.promotedCount} (2 points each)\n` +
+                `**❌ Failed:** ${data.failedCount} (0 points)\n` +
+                `**⭐ Points Awarded:** ${data.promotedCount * 2}`,
+            );
+        statsContainer.addTextDisplayComponents(stats);
+
+        // Create participants container with accent color (purple - 0x9B59B6)
+        const participantsContainer = new ContainerBuilder()
+            .setAccentColor(0x9B59B6);
+
+        const participantsTitle = new TextDisplayBuilder()
+            .setContent('## 👥 Participants Breakdown');
+        participantsContainer.addTextDisplayComponents(participantsTitle);
+
+        const participantsSeparator = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        participantsContainer.addSeparatorComponents(participantsSeparator);
+
         if (data.participants.length > 0) {
-            const separator2 = new SeparatorBuilder({
-                spacing: SeparatorSpacingSize.Small,
-                divider: true,
-            });
-            container.addSeparatorComponents(separator2);
+            const promotedList = data.participants.filter(p => p.promoted);
+            const failedList = data.participants.filter(p => p.failed);
+            const otherList = data.participants.filter(p => !p.promoted && !p.failed);
 
-            const participantsList = data.participants
-                .map(p => {
-                    if (p.promoted) return `✅ <@${p.discordId}>`;
-                    if (p.failed) return `❌ <@${p.discordId}> - Failed`;
-                    return `<@${p.discordId}>`;
-                })
-                .join('\n');
+            let participantContent = '';
+
+            if (promotedList.length > 0) {
+                participantContent += `**✅ Promoted (${promotedList.length}):**\n`;
+                participantContent += promotedList.map(p => `• <@${p.discordId}> (+${p.points} pts)`).join('\n');
+                participantContent += '\n\n';
+            }
+
+            if (failedList.length > 0) {
+                participantContent += `**❌ Failed (${failedList.length}):**\n`;
+                participantContent += failedList.map(p => `• <@${p.discordId}>`).join('\n');
+                participantContent += '\n\n';
+            }
+
+            if (otherList.length > 0) {
+                participantContent += `**👤 Other Attendees (${otherList.length}):**\n`;
+                participantContent += otherList.map(p => `• <@${p.discordId}>`).join('\n');
+            }
 
             const participantsText = new TextDisplayBuilder()
-                .setContent(`**Participants:**\n${participantsList}`);
-            container.addTextDisplayComponents(participantsText);
+                .setContent(participantContent.trim());
+            participantsContainer.addTextDisplayComponents(participantsText);
         }
 
-        // Image if provided
-        if (data.imageLink) {
-            const separator3 = new SeparatorBuilder({
+        // Create notes/image container if applicable (orange accent - 0xE67E22)
+        let notesContainer: ContainerBuilder | null = null;
+        if (data.notes || data.imageLink) {
+            notesContainer = new ContainerBuilder()
+                .setAccentColor(0xE67E22);
+
+            const notesTitle = new TextDisplayBuilder()
+                .setContent('## 📝 Additional Information');
+            notesContainer.addTextDisplayComponents(notesTitle);
+
+            const notesSeparator = new SeparatorBuilder({
                 spacing: SeparatorSpacingSize.Small,
                 divider: true,
             });
-            container.addSeparatorComponents(separator3);
+            notesContainer.addSeparatorComponents(notesSeparator);
 
-            const imageText = new TextDisplayBuilder()
-                .setContent(`**Event Image:** [View Image](${data.imageLink})`);
-            container.addTextDisplayComponents(imageText);
+            let notesContent = '';
+            if (data.notes) {
+                notesContent += `**📄 Notes:**\n${data.notes}`;
+            }
+            if (data.imageLink) {
+                if (notesContent) notesContent += '\n\n';
+                notesContent += `**📷 Event Image:** [View Image](${data.imageLink})`;
+            }
+
+            const notesText = new TextDisplayBuilder()
+                .setContent(notesContent);
+            notesContainer.addTextDisplayComponents(notesText);
         }
 
-        // Send container message
-        await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2 });
+        // Main title with academy emoji
+        const titleDisplay = new TextDisplayBuilder()
+            .setContent('# 🎓 Academy Training Log');
+
+        // Assemble all components
+        const components = [titleDisplay, headerContainer, statsContainer, participantsContainer];
+        if (notesContainer) {
+            components.push(notesContainer);
+        }
+
+        // Send message with all containers
+        await channel.send({ components, flags: MessageFlags.IsComponentsV2 });
     }
     catch (error) {
         console.error('[discordLogger] Failed to log academy training:', error);

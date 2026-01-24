@@ -64,16 +64,17 @@ class AdjustPointsCommand extends BaseCommand {
                 },
             });
 
-            const container = new ContainerBuilder();
-            const title = new TextDisplayBuilder().setContent('# ✅ Points Adjusted');
+            const container = new ContainerBuilder()
+                .setAccentColor(0x3498DB);
+            const title = new TextDisplayBuilder().setContent('## ✅ Points Adjusted Successfully');
             container.addTextDisplayComponents(title);
 
             const details = new TextDisplayBuilder().setContent(
-                `**User:** ${targetUser.username}\n` +
-                `**Adjustment:** ${amount > 0 ? '+' : ''}${amount} points\n` +
-                `**New Total:** ${updatedProfile.points} points\n` +
-                `**Reason:** ${reason}\n` +
-                `**Adjusted by:** ${interaction.user.username}`,
+                `**👤 User:** ${targetUser.username}\n` +
+                `**🔄 Adjustment:** ${amount > 0 ? '+' : ''}${amount} points\n` +
+                `**⭐ New Total:** ${updatedProfile.points} points\n` +
+                `**📝 Reason:** *${reason}*\n` +
+                `**👤 Adjusted by:** ${interaction.user.username}`,
             );
             container.addTextDisplayComponents(details);
 
@@ -84,8 +85,9 @@ class AdjustPointsCommand extends BaseCommand {
         }
         catch (error) {
             console.error('[adjust-points] Error adjusting points:', error);
-            const container = new ContainerBuilder();
-            const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nFailed to adjust points. Please try again.');
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            const content = new TextDisplayBuilder().setContent('## ❌ Error\n\n**Issue:** Failed to adjust points.\n**Action:** Please try again or contact support.');
             container.addTextDisplayComponents(content);
             await interaction.editReply({
                 flags: MessageFlags.IsComponentsV2,

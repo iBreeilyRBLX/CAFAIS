@@ -5,6 +5,7 @@ import { checkAndReplyPerms } from '../../ranks/permissionCheck';
 import { canPromoteToRank } from '../../ranks/permissions';
 import { promoteUser, getRankByPrefix, getNextRank } from '../../features/rankingManager';
 import { PromotionStatus } from '../../types/ranking';
+import { ranks } from '../../ranks/ranks';
 
 /**
  * @fileoverview Promote Command - Promotes users with centralized validation
@@ -24,6 +25,11 @@ class PromoteCommand extends BaseCommand {
             option.setName('reason')
                 .setDescription('Reason for promotion')
                 .setRequired(false),
+        )
+        .addBooleanOption(option =>
+            option.setName('bypass_requirements')
+                .setDescription('Bypass cooldown and points requirements (HICOM only)')
+                .setRequired(false),
         ) as SlashCommandBuilder;
 
     public global = false;
@@ -40,11 +46,13 @@ class PromoteCommand extends BaseCommand {
 
             const targetUser = interaction.options.getUser('user', true);
             const reason = interaction.options.getString('reason') || 'Manual promotion';
+            const bypassRequirements = interaction.options.getBoolean('bypass_requirements') || false;
             const targetMember = await interaction.guild?.members.fetch(targetUser.id);
 
             if (!targetMember) {
-                const container = new ContainerBuilder();
-                const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nCould not fetch member data.');
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                const content = new TextDisplayBuilder().setContent('## ❌ Error\n\nCould not fetch member data. Please try again.');
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
                     flags: MessageFlags.IsComponentsV2,
@@ -53,14 +61,13 @@ class PromoteCommand extends BaseCommand {
                 return;
             }
 
-            // Find user's current rank
-            const currentRankInfo = Array.from(targetMember.roles.cache.values())
-                .map(role => getRankByPrefix(role.name.split(' ')[0]?.replace(/[\[\]]/g, '') || ''))
-                .find(rank => rank !== undefined);
+            // Find user's current rank by checking their roles against the ranks array
+            const currentRank = ranks.find(rank => targetMember.roles.cache.has(rank.discordRoleId));
 
-            if (!currentRankInfo) {
-                const container = new ContainerBuilder();
-                const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nUser has no rank.');
+            if (!currentRank) {
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                const content = new TextDisplayBuilder().setContent('## ❌ Error\n\n**Issue:** User has no rank assigned.\n**Action:** Please assign a rank first.');
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
                     flags: MessageFlags.IsComponentsV2,
@@ -70,10 +77,11 @@ class PromoteCommand extends BaseCommand {
             }
 
             // Get next rank
-            const nextRankPrefix = getNextRank(currentRankInfo.prefix);
+            const nextRankPrefix = getNextRank(currentRank.prefix);
             if (!nextRankPrefix) {
-                const container = new ContainerBuilder();
-                const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nUser is already at maximum rank.');
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                const content = new TextDisplayBuilder().setContent('## ❌ Cannot Promote\n\n**Reason:** User is already at maximum rank.\n**Current Rank:** ' + currentRank.name);
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
                     flags: MessageFlags.IsComponentsV2,
@@ -85,9 +93,10 @@ class PromoteCommand extends BaseCommand {
             // Check if executor can promote to this rank
             const promotionCheck = canPromoteToRank(interaction.member as GuildMember, nextRankPrefix);
             if (!promotionCheck.canPromote) {
-                const container = new ContainerBuilder();
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
                 const content = new TextDisplayBuilder().setContent(
-                    `# ❌ Insufficient Promotion Authority\n\n${promotionCheck.reason}`,
+                    `## 🚫 Insufficient Authority\n\n**Reason:**\n${promotionCheck.reason}`,
                 );
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
@@ -102,50 +111,58 @@ class PromoteCommand extends BaseCommand {
                 targetMember,
                 targetUser,
                 toRank: nextRankPrefix as any, // Type assertion as rankingManager accepts string prefixes
-                fromRank: currentRankInfo.prefix as any,
+                fromRank: currentRank.prefix as any,
                 executorId: interaction.user.id,
                 executorUsername: interaction.user.username,
                 reason,
-                bypassCooldown: false,
-                bypassPoints: false,
+                bypassCooldown: bypassRequirements,
+                bypassPoints: bypassRequirements,
             });
 
             // Handle result
             if (result.success) {
-                const container = new ContainerBuilder();
+                const container = new ContainerBuilder()
+                    .setAccentColor(0x2ECC71);
                 const content = new TextDisplayBuilder().setContent(
-                    `# ✅ Promotion Successful\n\n${targetUser.username} has been promoted from **${currentRankInfo.name}** to **${getRankByPrefix(nextRankPrefix)?.name}**.\n\n**Reason:** ${reason}`,
+                    '## ✅ Promotion Successful\n\n' +
+                    `**User:** ${targetUser.username}\n` +
+                    `**From:** ${currentRank.name}\n` +
+                    `**To:** ${getRankByPrefix(nextRankPrefix)?.name}\n\n` +
+                    `**Reason:** *${reason}*`,
                 );
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
                     flags: MessageFlags.IsComponentsV2,
                     components: [container],
                 });
-            } else {
+            }
+            else {
                 // Handle various failure cases
-                let errorMessage = '# ❌ Promotion Failed\n\n';
+                let errorMessage = '## ❌ Promotion Failed\n\n';
                 switch (result.status) {
-                    case PromotionStatus.COOLDOWN_ACTIVE:
-                        const hours = result.cooldownRemaining ? Math.ceil(result.cooldownRemaining / (1000 * 60 * 60)) : 0;
-                        errorMessage += `User is still on cooldown. **${hours} hours** remaining before they can be promoted.`;
-                        break;
-                    case PromotionStatus.INSUFFICIENT_POINTS:
-                        errorMessage += `User needs **${result.pointsNeeded} more points** to be eligible for promotion.`;
-                        break;
-                    case PromotionStatus.RANK_LOCKED:
-                        errorMessage += `User is locked at rank **${result.fromRank}** and cannot be promoted.`;
-                        break;
-                    case PromotionStatus.ROLE_ERROR:
-                        errorMessage += `Failed to update Discord roles. ${result.message}`;
-                        break;
-                    case PromotionStatus.DATABASE_ERROR:
-                        errorMessage += `Database error occurred. ${result.message}`;
-                        break;
-                    default:
-                        errorMessage += result.message || 'An unknown error occurred.';
+                case PromotionStatus.COOLDOWN_ACTIVE: {
+                    const hours = result.cooldownRemaining ? Math.ceil(result.cooldownRemaining / (1000 * 60 * 60)) : 0;
+                    errorMessage += `**⏰ Cooldown Active**\nUser must wait **${hours} hours** before promotion.`;
+                    break;
+                }
+                case PromotionStatus.INSUFFICIENT_POINTS:
+                    errorMessage += `**⭐ Insufficient Points**\nUser needs **${result.pointsNeeded} more points** for eligibility.`;
+                    break;
+                case PromotionStatus.RANK_LOCKED:
+                    errorMessage += `**🔒 Rank Locked**\nUser is locked at rank **${result.fromRank}**.`;
+                    break;
+                case PromotionStatus.ROLE_ERROR:
+                    errorMessage += `**⚠️ Role Update Failed**\n${result.message}`;
+                    break;
+                case PromotionStatus.DATABASE_ERROR:
+                    errorMessage += `**💾 Database Error**\n${result.message}`;
+                    break;
+                default:
+                    errorMessage += `**Error:** ${result.message || 'An unknown error occurred.'}`;
                 }
 
-                const container = new ContainerBuilder();
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
                 const content = new TextDisplayBuilder().setContent(errorMessage);
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
@@ -156,8 +173,9 @@ class PromoteCommand extends BaseCommand {
         }
         catch (error) {
             console.error('[promote] Error in promote command:', error);
-            const container = new ContainerBuilder();
-            const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nAn unexpected error occurred during promotion. Please try again.');
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            const content = new TextDisplayBuilder().setContent('## ❌ Unexpected Error\n\n**Issue:** An unexpected error occurred.\n**Action:** Please try again or contact an administrator.');
             container.addTextDisplayComponents(content);
             await interaction.editReply({
                 flags: MessageFlags.IsComponentsV2,

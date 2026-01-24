@@ -36,10 +36,11 @@ const button: Button = {
 
         const member = await guild.members.fetch(applicantId).catch(() => null);
         if (!member) {
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Error'));
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ❌ Error'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('Applicant not found.'));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:** Applicant not found in server.\n**Action:** User may have left the server.'));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
             return;
@@ -48,10 +49,11 @@ const button: Button = {
         try {
             const verifiedUser = await prisma.verifiedUser.findUnique({ where: { discordId: applicantId } });
             if (!verifiedUser) {
-                const container = new ContainerBuilder();
-                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Approval Blocked'));
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE67E22);
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ⚠️ Approval Blocked'));
                 container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('Applicant is not Roblox-verified. Please ask them to verify and re-apply.'));
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:** Applicant is not Roblox-verified.\n**Action:** Ask them to verify and re-apply.'));
 
                 await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
                 return;
@@ -59,10 +61,11 @@ const button: Button = {
 
             const robloxUserId = Number(verifiedUser.robloxId);
             if (!Number.isFinite(robloxUserId)) {
-                const container = new ContainerBuilder();
-                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Approval Blocked'));
+                const container = new ContainerBuilder()
+                    .setAccentColor(0xE74C3C);
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ❌ Approval Blocked'));
                 container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('Could not read the applicant Roblox account. Please have them re-verify.'));
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:** Invalid Roblox account data.\n**Action:** Have them re-verify their account.'));
 
                 await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
                 return;
@@ -79,15 +82,16 @@ const button: Button = {
             const now = new Date();
             const timestamp = `<t:${Math.floor(now.getTime() / 1000)}:f>`;
 
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ✅ Application Approved.')); // application approved
-            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: false }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
+            const container = new ContainerBuilder()
+                .setAccentColor(0x57F287);
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ✅ Application Approved'));
+            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`**👤 Applicant:** ${member.user.tag} (<@${member.user.id}>)`));
             const robloxDisplayName = verifiedUser.robloxDisplayName || verifiedUser.robloxUsername;
             const robloxProfile = `https://www.roblox.com/users/${verifiedUser.robloxId}/profile`;
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername}) ([View Profile](${robloxProfile}))`));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎮 **Roblox Group:** ${groupResultText}`));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`✍️ **Approved by:** ${author.displayName}`));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`**🎮 Roblox:** ${robloxDisplayName} (@${verifiedUser.robloxUsername}) • [Profile](${robloxProfile})`));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`**🎮 Group Status:** ${groupResultText}`));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`**✍️ Approved by:** ${author.displayName}`));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
 
             // Show original application details
@@ -107,28 +111,26 @@ const button: Button = {
             await member.roles.add(config.roles.initiate);
 
 
-            const dmContainer = new ContainerBuilder();
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ✅ Application Approved'));
+            const dmContainer = new ContainerBuilder()
+                .setAccentColor(0x57F287);
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('## 🎉 Application Approved!'));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`<@${applicantId}>, Welcome to the team!`));
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`**Welcome to the team, <@${applicantId}>!**\n\nYour application has been approved and you're now an Initiate.`));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Discord:** ${member.user.tag}\n` +
-                `**Roblox:** ${robloxDisplayName}\n` +
-                `[View Profile](${robloxProfile})`,
+                `**👤 Discord:** ${member.user.tag}\n` +
+                `**🎮 Roblox:** ${robloxDisplayName} • [Profile](${robloxProfile})`,
             ));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('📋 **Your Application:**'));
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('### 📋 Your Application'));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Submission #:** ${application.submissionCount}\n` +
-                `**Reason:** \`\`\`\n${application.applicationReason}\n\`\`\`\n` +
-                `**Found Us:** ${application.foundServer}`,
+                `**Submission #${application.submissionCount}**\n\n` +
+                `**Why join:** \`\`\`\n${application.applicationReason}\n\`\`\`\n` +
+                `**Found us:** ${application.foundServer}`,
             ));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`<#${config.channels.training}> contains details regarding your training.\n`));
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎯 **Next Steps:** Visit <#${config.channels.training}> for training information.`));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`✍️ **Approved by:** ${author.displayName}`));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Approved:** ${timestamp}`));
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`**✍️ Approved by:** ${author.displayName}\n**⏰ Approved:** ${timestamp}`));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] });
 
@@ -140,10 +142,11 @@ const button: Button = {
         }
         catch (error) {
             console.error(error);
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# Approval Failed'));
+            const container = new ContainerBuilder()
+                .setAccentColor(0xE74C3C);
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ❌ Approval Failed'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('An error occurred while approving the application.'));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:** An error occurred while approving.\n**Action:** Please try again or contact an administrator.'));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
         }

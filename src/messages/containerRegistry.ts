@@ -72,10 +72,11 @@ export const containerRegistry: Record<number, () => ContainerBuilder> = {
     },
     2: () => {
         // Message ID 2: Application Center
-        const container = new ContainerBuilder();
+        const container = new ContainerBuilder()
+            .setAccentColor(0x57F287);
 
         const title = new TextDisplayBuilder()
-            .setContent('# Application Center');
+            .setContent('# 📝 Application Center');
         container.addTextDisplayComponents(title);
         const separator1 = new SeparatorBuilder({
             spacing: SeparatorSpacingSize.Small,
@@ -85,12 +86,18 @@ export const containerRegistry: Record<number, () => ContainerBuilder> = {
 
         const description = new TextDisplayBuilder()
             .setContent(
-                'Welcome to the Application Center! Here, you can apply to become a Trooper in the Cascadian Armed Forces [CASF].\n\n' +
-                '**How to Apply:**\n' +
-                'First pend to the Roblox group so you can be accepted in.\n' +
-                'Click the "Start Application" button below to begin your application process.\n\n' +
-                'If you need assistance, feel free to reach out to <@&1454232274273959957>+ personnel.\n\n' +
-                '**We look forward to reviewing your application!**',
+                '**Ready to join the Cascadian Armed Forces [CASF]?**\n\n' +
+                'This is where your journey begins! Follow these steps to submit your application.\n\n' +
+                '## 📝 Application Steps:\n' +
+                '**1.** Send a join request to the **Roblox Group**\n' +
+                '**2.** Click **"Start Application"** below\n' +
+                '**3.** Complete the application form\n' +
+                '**4.** Wait for review by our team\n\n' +
+                '## ℹ️ Important Notes:\n' +
+                '• Ensure your Roblox account is verified\n' +
+                '• Answer all questions honestly\n' +
+                '• Applications are reviewed within 24-48 hours\n\n' +
+                '_Questions? Contact <@&1454232274273959957>+ personnel for assistance._',
             );
         container.addTextDisplayComponents(description);
 
