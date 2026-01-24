@@ -63,6 +63,19 @@ export async function findActiveEventByTypeAndHost(eventType: string, hostDiscor
 }
 
 /**
+ * Transfers event ownership to a new host
+ * @param eventId - Event ID to transfer
+ * @param newHostDiscordId - Discord ID of new host
+ * @returns Updated event object
+ */
+export async function transferEvent(eventId: string, newHostDiscordId: string) {
+    return prisma.event.update({
+        where: { id: eventId },
+        data: { eventHostDiscordId: newHostDiscordId },
+    });
+}
+
+/**
  * Finds an active event by host (any type)
  * @param hostDiscordId - Discord ID of event host
  * @returns Most recent active event or null

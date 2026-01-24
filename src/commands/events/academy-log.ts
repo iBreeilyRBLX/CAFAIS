@@ -195,17 +195,20 @@ class AcademyLogCommand extends BaseCommand {
                 return;
             }
 
-            // Helper: check if a user is an Initiate using VC members cache or guild fetch
-            const isInitiate = async (userId: string): Promise<boolean> => {
-                const cachedMember = channel.members.get(userId);
-                const targetMember = cachedMember ?? await interaction.guild?.members.fetch(userId).catch(() => null);
-                return !!targetMember && targetMember.roles.cache.has(INITIATE_ROLE_ID);
-            };
+            // Pre-fetch all Initiate members once (performance optimization)
+            const initiateMembers = new Map<string, GuildMember>();
+            for (const user of participants) {
+                const cachedMember = channel.members.get(user.id);
+                const targetMember = cachedMember ?? await interaction.guild?.members.fetch(user.id).catch(() => null);
+                if (targetMember?.roles.cache.has(INITIATE_ROLE_ID)) {
+                    initiateMembers.set(user.id, targetMember);
+                }
+            }
 
             // Determine failed Initiates (ignore fail marks for non-Initiates)
             const failedInitiatesIds = new Set<string>();
             for (const userId of failedParticipantIds) {
-                if (await isInitiate(userId) && participants.some(p => p.id === userId)) {
+                if (initiateMembers.has(userId) && participants.some(p => p.id === userId)) {
                     failedInitiatesIds.add(userId);
                 }
             }
@@ -213,7 +216,7 @@ class AcademyLogCommand extends BaseCommand {
             // Determine passed Initiates: in participants, Initiate, and not failed
             const passedInitiates: typeof participants = [];
             for (const user of participants) {
-                if (await isInitiate(user.id) && !failedInitiatesIds.has(user.id)) {
+                if (initiateMembers.has(user.id) && !failedInitiatesIds.has(user.id)) {
                     passedInitiates.push(user);
                 }
             }
@@ -221,7 +224,7 @@ class AcademyLogCommand extends BaseCommand {
             // Prepare promotion requests for passed participants
             const promotionRequests: PromotionRequest[] = [];
             for (const user of passedInitiates) {
-                const targetMember = channel.members.get(user.id) ?? await interaction.guild?.members.fetch(user.id).catch(() => null);
+                const targetMember = initiateMembers.get(user.id);
                 if (!targetMember) continue;
 
                 promotionRequests.push({
