@@ -14,6 +14,7 @@ import { ModalSubmit } from '../../../interfaces';
 import prisma from '../../../database/prisma';
 import robloxGroupService from '../../../features/robloxGroupService';
 import taseService from '../../../features/taseService';
+import { CUSTOM_EMOJIS } from '../../../config/emojis';
 
 
 const modalHandler: ModalSubmit = {
@@ -22,22 +23,6 @@ const modalHandler: ModalSubmit = {
         const applicationReason = interaction.fields.getTextInputValue('applicationReason');
         const foundServer = interaction.fields.getTextInputValue('foundserver');
         const age = interaction.fields.getTextInputValue('age');
-
-        // Check if user was recently denied (7-day cooldown)
-        const applicationRecord = await prisma.applicationSubmission.findUnique({
-            where: { userDiscordId: interaction.user.id },
-        });
-
-        if (applicationRecord?.lastDeniedAt) {
-            const cooldownEnd = new Date(applicationRecord.lastDeniedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
-            if (new Date() < cooldownEnd) {
-                const daysRemaining = Math.ceil((cooldownEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                await interaction.editReply({
-                    content: `❌ You were recently denied. Please wait ${daysRemaining} more day(s) before reapplying.`,
-                });
-                return;
-            }
-        }
 
         // Fetch user's Roblox profile from database using Prisma
         let robloxProfile = 'Not verified';
@@ -57,15 +42,16 @@ const modalHandler: ModalSubmit = {
         }
 
         if (!verifiedUser) {
-            await interaction.editReply({
+            await interaction.reply({
                 content: 'Please verify your Roblox account and submit a join request to our Roblox group before applying: https://www.roblox.com/groups/11590462',
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
 
         const robloxUserId = Number(verifiedUser.robloxId);
         if (!Number.isFinite(robloxUserId)) {
-            await interaction.followUp({
+            await interaction.reply({
                 content: 'We could not read your Roblox account. Please try re-verifying before applying.',
                 flags: MessageFlags.Ephemeral,
             });
@@ -82,17 +68,15 @@ const modalHandler: ModalSubmit = {
         }
         catch (error) {
             console.error('[ERROR] Failed to validate Roblox group join request:', error);
-            await interaction.followUp({
+            await interaction.editReply({
                 content: 'Could not verify your Roblox group join request right now. Please try again shortly.',
-                flags: MessageFlags.Ephemeral,
             });
             return;
         }
 
         if (!hasPendingJoinRequestOrMember) {
-            await interaction.followUp({
+            await interaction.editReply({
                 content: 'You need to submit a join request to our Roblox group before applying: https://www.roblox.com/groups/11590462',
-                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -102,9 +86,8 @@ const modalHandler: ModalSubmit = {
             where: { userDiscordId: interaction.user.id },
         });
         if (existingApplication && existingApplication.isPending) {
-            await interaction.followUp({
+            await interaction.editReply({
                 content: `You already have a pending application. Please wait for it to be reviewed before submitting another one. (Submission attempt #${existingApplication.submissionCount + 1})`,
-                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -130,11 +113,6 @@ const modalHandler: ModalSubmit = {
             console.error('[ERROR] Failed to fetch applications channel:', error);
             return;
         }
-
-        await interaction.followUp({
-            content: 'Your application is being submitted for review...',
-            flags: MessageFlags.Ephemeral,
-        });
 
         // Perform TASE safety check on the user
         const taseCheckResult = await taseService.checkUser(interaction.user.id);
@@ -169,50 +147,55 @@ const modalHandler: ModalSubmit = {
         const submissionAttempt = (existingApplication?.submissionCount ?? 0) + 1;
 
         // Use ContainerBuilder for the application message
-        const container = new ContainerBuilder();
+        const container = new ContainerBuilder()
+            .setAccentColor(0x3498DB);
 
-        const title = new TextDisplayBuilder().setContent('# 📋 New Application Submission');
-        container.addTextDisplayComponents(title);
-
-        const userInfo = new TextDisplayBuilder().setContent(
-            `👤 **${interaction.user.tag}** (${interaction.user.id}) <@${interaction.user.id}>\n` +
-            `🎮 **Roblox:** ${robloxDisplayName}(@${verifiedUser.robloxUsername})\n` +
-            `🔗 [View Roblox Profile](${robloxProfile})`,
+        container.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent('## 📋 Application Submission'),
         );
-        container.addTextDisplayComponents(userInfo);
 
-        const separator1a = new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true });
-        container.addSeparatorComponents(separator1a);
-
-        const applicationInfo = new TextDisplayBuilder().setContent(
-            `\`#${submissionAttempt}\` **Submission Attempt**\n\n` +
-            `**Why are you applying?**\n\`\`\`\n${applicationReason}\n\`\`\`\n\n` +
-            `**Where did you find us?** ${foundServer}\n` +
-            `**Are they above 13?** ${age}`,
+        container.addSeparatorComponents(
+            new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }),
         );
-        container.addTextDisplayComponents(applicationInfo);
 
-        const separator1b = new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true });
-        container.addSeparatorComponents(separator1b);
+        container.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                `**Applicant:** ${interaction.user.tag} (<@${interaction.user.id}>)\n` +
+                `**${CUSTOM_EMOJIS.roblox.default} Roblox:** ${robloxDisplayName} (@${verifiedUser.robloxUsername}) • [Profile](${robloxProfile})\n` +
+                `**Submission:** #${submissionAttempt}`,
+            ),
+        );
+
+        container.addSeparatorComponents(
+            new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }),
+        );
+
+        container.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                `**Application Reason**\n\`\`\`\n${applicationReason}\n\`\`\`\n\n` +
+                `**Found us via:** ${foundServer}\n` +
+                `**Age verification:** ${age}`,
+            ),
+        );
+
+        container.addSeparatorComponents(
+            new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }),
+        );
 
         const outcomeEmoji = estimatedOutcome === 'approve' ? '✅' : estimatedOutcome === 'guest' ? '👥' : '❌';
-        const outcome = new TextDisplayBuilder().setContent(
-            `${outcomeEmoji} **Estimated Outcome:** ${estimatedOutcome.charAt(0).toUpperCase() + estimatedOutcome.slice(1)}`,
+        container.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                `${outcomeEmoji} **Estimated Outcome:** ${estimatedOutcome.charAt(0).toUpperCase() + estimatedOutcome.slice(1)}`,
+            ),
         );
-        container.addTextDisplayComponents(outcome);
-        const separator1 = new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true });
-        container.addSeparatorComponents(separator1);
 
-        /**
-         * Build TASE Safety Check display
-         * Shows whether the user has been flagged in the TASE database
-         * and displays any matched flags with their emoji indicators
-         */
-        const taseEmoji = taseCheckResult.safe ? '✅' : '⚠️';
-        const taseHeader = new TextDisplayBuilder().setContent(
-            `${taseEmoji} **TASE Check:** ${taseCheckResult.description}`,
+        container.addSeparatorComponents(
+            new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }),
         );
-        container.addTextDisplayComponents(taseHeader);
+
+        // TASE Safety Check
+        const taseEmoji = taseCheckResult.safe ? '✅' : '⚠️';
+        let taseContent = `${taseEmoji} **TASE Check:** ${taseCheckResult.description}`;
 
         // Add matched flags if any exist
         if (taseCheckResult.results.length > 0 && !taseCheckResult.safe) {
@@ -222,15 +205,17 @@ const modalHandler: ModalSubmit = {
                 .join('\n');
 
             if (flagsContent) {
-                const flagsDisplay = new TextDisplayBuilder().setContent(
-                    `**Matched Flags:**\n${flagsContent}`,
-                );
-                container.addTextDisplayComponents(flagsDisplay);
+                taseContent += `\n\n**Matched Flags:**\n${flagsContent}`;
             }
         }
 
-        const separatorTase = new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true });
-        container.addSeparatorComponents(separatorTase);
+        container.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(taseContent),
+        );
+
+        container.addSeparatorComponents(
+            new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }),
+        );
 
         const approveButton = new DjsButtonBuilder()
             .setCustomId(`approveApplication_${interaction.user.id}`)
