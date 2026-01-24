@@ -43,15 +43,7 @@ const button: Button = {
             }
 
             const now = new Date();
-            const timestamp = now.toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true,
-            });
+            const timestamp = `<t:${Math.floor(now.getTime() / 1000)}:f>`;
 
             // Get verified user info for Roblox details
             const verifiedUser = await prisma.verifiedUser.findUnique({ where: { discordId: applicantId } });
@@ -74,9 +66,10 @@ const button: Button = {
                 `**Are they above 13?** ${application.age}`,
             );
             container.addTextDisplayComponents(applicationInfo);
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`❌ **Denied by:** ${author.displayName}`));
+            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
 
@@ -88,8 +81,6 @@ const button: Button = {
 
             const dmContainer = new ContainerBuilder();
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ❌ Application Denied'));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Denied:** ${timestamp}`));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`<@${applicantId}>, your application has been denied.`));
             if (verifiedUser) {
@@ -109,14 +100,20 @@ const button: Button = {
             ));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('You may reapply in the future.'));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: false }));
+            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`❌ **Denied by:** ${author.displayName}`));
+            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Denied:** ${timestamp}`));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] }).catch(() => null);
 
-            // Delete the application submission record from the database
-            await prisma.applicationSubmission.delete({
+            // Delete the application submission record and set cooldown
+            await prisma.applicationSubmission.update({
                 where: { id: application.id },
+                data: {
+                    isPending: false,
+                    lastDeniedAt: new Date(),
+                },
             });
         }
         catch (error) {

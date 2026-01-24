@@ -1,20 +1,22 @@
 /* eslint-disable no-inline-comments */
 import {
     GuildMember,
-    Message,
     ContainerBuilder,
     TextDisplayBuilder,
     SeparatorBuilder,
     SeparatorSpacingSize,
     MessageFlags,
+    ButtonInteraction,
 } from 'discord.js';
 import { Button } from '../../../interfaces';
 import prisma from '../../../database/prisma';
 import robloxGroupService from '../../../features/robloxGroupService';
+import ExtendedClient from '../../../classes/Client';
+import config from '../../../config.json';
 
 const button: Button = {
     name: 'approveApplication',
-    execute: async (client: any, interaction: any) => {
+    execute: async (client: ExtendedClient, interaction: ButtonInteraction): Promise<void> => {
         const [action, applicantId] = interaction.customId.split('_');
         if (action !== 'approveApplication') return;
 
@@ -25,7 +27,8 @@ const button: Button = {
             where: { userDiscordId: applicantId },
         });
         if (!application || !application.isPending) {
-            return interaction.reply({ content: 'No pending application found for this user.', ephemeral: true });
+            await interaction.reply({ content: 'No pending application found for this user.', ephemeral: true });
+            return;
         }
 
         const guild = interaction.guild;
@@ -43,9 +46,6 @@ const button: Button = {
         }
 
         try {
-            // Defer interaction first
-            await interaction.deferUpdate();
-
             const verifiedUser = await prisma.verifiedUser.findUnique({ where: { discordId: applicantId } });
             if (!verifiedUser) {
                 const container = new ContainerBuilder();
@@ -77,15 +77,7 @@ const button: Button = {
 
             // Update with approval status and application details
             const now = new Date();
-            const timestamp = now.toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true,
-            });
+            const timestamp = `<t:${Math.floor(now.getTime() / 1000)}:f>`;
 
             const container = new ContainerBuilder();
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ✅ Application Approved.')); // application approved
@@ -105,25 +97,24 @@ const button: Button = {
                 `**Are they above 13?** ${application.age}`,
             );
             container.addTextDisplayComponents(applicationInfo);
+            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
             await interaction.followUp({ content: 'Application approved successfully.', ephemeral: true });
 
-            // Update roles
-            await member.roles.remove('1454532106565845064'); // Remove Applicant role
-            await member.roles.add('1454248763915898971');
+            // Update roles - use centralized config
+            await member.roles.remove(config.roles.applicant);
+            await member.roles.add(config.roles.initiate);
 
 
             const dmContainer = new ContainerBuilder();
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('# ✅ Application Approved'));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Approved:** ${timestamp}`));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`<@${applicantId}>, Welcome to the team!`));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `👤 **Discord:** ${member.user.tag}\n` +
-                `🎮 **Roblox:** ${robloxDisplayName}\n` +
-                `🔗 [View Profile](${robloxProfile})`,
+                `**Discord:** ${member.user.tag}\n` +
+                `**Roblox:** ${robloxDisplayName}\n` +
+                `[View Profile](${robloxProfile})`,
             ));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('📋 **Your Application:**'));
@@ -133,9 +124,11 @@ const button: Button = {
                 `**Found Us:** ${application.foundServer}`,
             ));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('<#1454564611599761639> contains details regarding your training.\n'));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: false }));
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`<#${config.channels.training}> contains details regarding your training.\n`));
+            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`✍️ **Approved by:** ${author.displayName}`));
+            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Approved:** ${timestamp}`));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] });
 

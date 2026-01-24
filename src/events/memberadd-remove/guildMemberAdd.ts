@@ -25,15 +25,15 @@ const event: Event = {
         // Description
         const description = new TextDisplayBuilder()
             .setContent(
-                `<@${member.user.id}>
-                First apply for acces to the server by going to <#1454533143150333994> and clicking the "Verify Now" button below.\n\n` +
-                '**How to Apply:**\n' +
-                'First pend to the group so you can be accepted in.\n' +
-                'Next, fill out the application form linked in the verification channel.\n' +
-                'Wait for a staff member to review and accept your application.\n\n' +
-                '**After Verification, you\'ll gain access to:**\n' +
-                '⁍ **Application Center** - Apply to get into the faction.\n\n' +
-                'Need help? Contact <@&1454232274273959957>+ personnel.\n\n',
+                `<@${member.user.id}> First apply for access to the server by going to <#1454533143150333994> and clicking the "Verify Now" button below.\n\n` +
+            '**How to Apply:**\n' +
+            '1. Join the group to be eligible for acceptance\n' +
+            '2. Fill out the application form in the verification channel\n' +
+            '3. Wait for staff review and approval\n\n' +
+            '**After Verification, you\'ll gain access to:**\n' +
+            '⁍ Application Center - Apply to join the faction\n\n' +
+            '**Need Help?**\n' +
+            'Contact a High Command member for assistance\n\n',
             );
         container.addTextDisplayComponents(description);
 

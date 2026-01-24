@@ -23,6 +23,22 @@ const modalHandler: ModalSubmit = {
         const foundServer = interaction.fields.getTextInputValue('foundserver');
         const age = interaction.fields.getTextInputValue('age');
 
+        // Check if user was recently denied (7-day cooldown)
+        const applicationRecord = await prisma.applicationSubmission.findUnique({
+            where: { userDiscordId: interaction.user.id },
+        });
+
+        if (applicationRecord?.lastDeniedAt) {
+            const cooldownEnd = new Date(applicationRecord.lastDeniedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+            if (new Date() < cooldownEnd) {
+                const daysRemaining = Math.ceil((cooldownEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                await interaction.editReply({
+                    content: `❌ You were recently denied. Please wait ${daysRemaining} more day(s) before reapplying.`,
+                });
+                return;
+            }
+        }
+
         // Fetch user's Roblox profile from database using Prisma
         let robloxProfile = 'Not verified';
         let robloxDisplayName = 'Unknown';
@@ -41,18 +57,17 @@ const modalHandler: ModalSubmit = {
         }
 
         if (!verifiedUser) {
-            await interaction.reply({
+            await interaction.editReply({
                 content: 'Please verify your Roblox account and submit a join request to our Roblox group before applying: https://www.roblox.com/groups/11590462',
-                ephemeral: true,
             });
             return;
         }
 
         const robloxUserId = Number(verifiedUser.robloxId);
         if (!Number.isFinite(robloxUserId)) {
-            await interaction.reply({
+            await interaction.followUp({
                 content: 'We could not read your Roblox account. Please try re-verifying before applying.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -67,17 +82,17 @@ const modalHandler: ModalSubmit = {
         }
         catch (error) {
             console.error('[ERROR] Failed to validate Roblox group join request:', error);
-            await interaction.reply({
+            await interaction.followUp({
                 content: 'Could not verify your Roblox group join request right now. Please try again shortly.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
 
         if (!hasPendingJoinRequestOrMember) {
-            await interaction.reply({
+            await interaction.followUp({
                 content: 'You need to submit a join request to our Roblox group before applying: https://www.roblox.com/groups/11590462',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -87,9 +102,9 @@ const modalHandler: ModalSubmit = {
             where: { userDiscordId: interaction.user.id },
         });
         if (existingApplication && existingApplication.isPending) {
-            await interaction.reply({
+            await interaction.followUp({
                 content: `You already have a pending application. Please wait for it to be reviewed before submitting another one. (Submission attempt #${existingApplication.submissionCount + 1})`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -118,7 +133,7 @@ const modalHandler: ModalSubmit = {
 
         await interaction.followUp({
             content: 'Your application is being submitted for review...',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
 
         // Perform TASE safety check on the user

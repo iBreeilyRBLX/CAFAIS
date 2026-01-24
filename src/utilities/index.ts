@@ -7,3 +7,5 @@
 export * from './eventUtils';
 export * from './eventPermissions';
 export * from './participantUtils';
+export * from './validation';
+export * from './logger';

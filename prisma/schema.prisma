@@ -51,6 +51,7 @@ model UserProfile {
   awards       Award[]
   applicationSubmissions ApplicationSubmission[]
   verifiedUser VerifiedUser?
+  @@index([points])
 }
 
 model Event {
@@ -71,6 +72,8 @@ model Event {
   trainingEventLogs TrainingEventLog[]
   @@index([startTime])
   @@index([eventType])
+  @@index([eventHostDiscordId])
+  @@index([endTime])
 }
 
 model EventParticipant {
@@ -78,11 +81,13 @@ model EventParticipant {
   eventId    String
   userDiscordId String
   points     Int         @default(0)
+  failed     Boolean     @default(false)
   event      Event       @relation(fields: [eventId], references: [id])
   user       UserProfile @relation(fields: [userDiscordId], references: [discordId])
   @@unique([eventId, userDiscordId])
   @@index([eventId])
   @@index([userDiscordId])
+  @@index([points])
 }
 
 model EventAttendance {
@@ -152,6 +157,7 @@ model ApplicationSubmission {
   applicationReason String?
   foundServer       String?
   age               String?
+  lastDeniedAt      DateTime?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   user              UserProfile @relation(fields: [userDiscordId], references: [discordId], onDelete: Cascade)

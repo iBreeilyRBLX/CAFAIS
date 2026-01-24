@@ -71,6 +71,7 @@ export const containerRegistry: Record<number, () => ContainerBuilder> = {
         return container;
     },
     2: () => {
+        // Message ID 2: Application Center
         const container = new ContainerBuilder();
 
         const title = new TextDisplayBuilder()
@@ -86,7 +87,7 @@ export const containerRegistry: Record<number, () => ContainerBuilder> = {
             .setContent(
                 'Welcome to the Application Center! Here, you can apply to become a Trooper in the Cascadian Armed Forces [CASF].\n\n' +
                 '**How to Apply:**\n' +
-                'First pend to the group so you can be accepted in.\n' +
+                'First pend to the Roblox group so you can be accepted in.\n' +
                 'Click the "Start Application" button below to begin your application process.\n\n' +
                 'If you need assistance, feel free to reach out to <@&1454232274273959957>+ personnel.\n\n' +
                 '**We look forward to reviewing your application!**',
@@ -106,6 +107,13 @@ export const containerRegistry: Record<number, () => ContainerBuilder> = {
                     .setLabel('Start Application')
                     .setStyle(ButtonStyle.Primary)
                     .setEmoji('📝'),
+            )
+            .addComponents(
+                new ButtonBuilder()
+                    .setLabel('Roblox Group')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL('https://www.roblox.com/communities/11590462/Cascadian-Armed-Forces-CASF#!/about')
+                    .setEmoji('🌐'),
             );
         container.addActionRowComponents(buttonRow1);
 

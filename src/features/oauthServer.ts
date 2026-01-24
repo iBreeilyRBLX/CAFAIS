@@ -9,6 +9,63 @@ import { getSessionStore } from '../database/sessionStore';
 import helmet from 'helmet';
 import prisma from '../database/prisma';
 
+/**
+ * Clean up expired OAuth states every hour
+ */
+setInterval(async () => {
+    try {
+        const result = await prisma.oauthState.deleteMany({
+            where: {
+                expiresAt: {
+                    lt: new Date(),
+                },
+            },
+        });
+        if (result.count > 0) {
+            console.log(`[OAuth] Cleaned up ${result.count} expired OAuth states`);
+        }
+    }
+    catch (cleanupError) {
+        console.error('[OAuth] Failed to clean up expired states:', cleanupError);
+    }
+}, 60 * 60 * 1000);
+
+
+// Rate limiting configuration
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+function rateLimit(maxRequests: number, windowMs: number) {
+    return (req: Request, res: Response, next: () => void) => {
+        const ip = req.ip || req.socket.remoteAddress || 'unknown';
+        const now = Date.now();
+        const record = rateLimitStore.get(ip);
+
+        if (record && now < record.resetTime) {
+            if (record.count >= maxRequests) {
+                return res.status(429).json({
+                    error: 'Too many requests',
+                    message: 'Please wait before trying again',
+                    retryAfter: Math.ceil((record.resetTime - now) / 1000),
+                });
+            }
+            record.count++;
+        }
+        else {
+            rateLimitStore.set(ip, { count: 1, resetTime: now + windowMs });
+        }
+        next();
+    };
+}
+
+// Clean up old rate limit entries every 5 minutes
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, record] of rateLimitStore.entries()) {
+        if (now > record.resetTime) {
+            rateLimitStore.delete(ip);
+        }
+    }
+}, 5 * 60 * 1000);
 
 export function setupOAuthServer(client: ExtendedClient): void {
     const app = express();
@@ -45,8 +102,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
     // 4. Serve static dashboard files securely
     app.use('/static', express.static(path.join(process.cwd(), 'src', 'features', 'static'), {
         maxAge: '7d',
-        // eslint-disable-next-line no-shadow
-        setHeaders: (res, path) => {
+        setHeaders: (res) => {
             res.setHeader('X-Content-Type-Options', 'nosniff');
         },
     }));
@@ -112,7 +168,11 @@ export function setupOAuthServer(client: ExtendedClient): void {
 
     // API endpoint: Logout
     app.post('/api/logout', (req: Request, res: Response) => {
-        if (req.session) req.session.destroy(() => {});
+        if (req.session) {
+            req.session.destroy((err) => {
+                if (err) console.error('Session destroy error:', err);
+            });
+        }
         res.status(200).json({ success: true });
     });
     // Health check endpoint
@@ -144,6 +204,174 @@ export function setupOAuthServer(client: ExtendedClient): void {
                 res.status(200).send(data);
             }
         });
+    });
+
+    // OAuth callback with improved error handling
+    app.get('/oauth/callback', rateLimit(10, 60000), async (req: Request, res: Response) => {
+        const code = req.query.code as string;
+        const state = req.query.state as string;
+        const error = req.query.error as string;
+
+        if (error) {
+            console.error('[OAuth] User cancelled or error occurred:', error);
+            return res.status(400).send(`
+                <!DOCTYPE html>
+                <html><head><title>Verification Cancelled</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h1>❌ Verification Cancelled</h1>
+                    <p>You cancelled the verification process.</p>
+                    <p><a href="/">Try again</a></p>
+                </body></html>
+            `);
+        }
+
+        if (!code || !state) {
+            console.error('[OAuth] Missing code or state in callback');
+            return res.status(400).send(`
+                <!DOCTYPE html>
+                <html><head><title>Invalid Request</title></head>
+                <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                    <h1>❌ Invalid Request</h1>
+                    <p>Missing authorization code or state token.</p>
+                    <p>Please start the verification process again.</p>
+                </body></html>
+            `);
+        }
+
+        try {
+            const stateVerification = await robloxVerificationService.verifyStateToken(state);
+            if (!stateVerification.valid) {
+                return res.status(400).send(`
+                    <!DOCTYPE html>
+                    <html><head><title>Invalid State</title></head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <h1>❌ Invalid or Expired Link</h1>
+                        <p>This verification link has expired or is invalid.</p>
+                        <p>Please use the <code>/verify</code> command in Discord to get a new link.</p>
+                    </body></html>
+                `);
+            }
+
+            const accessToken = await robloxVerificationService.exchangeCodeForToken(code);
+            if (!accessToken) {
+                return res.status(500).send(`
+                    <!DOCTYPE html>
+                    <html><head><title>Verification Failed</title></head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <h1>\u274c Verification Failed</h1>
+                        <p>Failed to exchange authorization code. Please try again.</p>
+                        <p>If the problem persists, contact an administrator.</p>
+                    </body></html>
+                `);
+            }
+
+            // Get Roblox user info and complete verification
+            const robloxUser = await robloxVerificationService.getRobloxUserFromToken(accessToken);
+            if (!robloxUser) {
+                return res.status(500).send(`
+                    <!DOCTYPE html>
+                    <html><head><title>Verification Failed</title></head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <h1>\u274c Verification Failed</h1>
+                        <p>Could not retrieve your Roblox information.</p>
+                    </body></html>
+                `);
+            }
+
+            // Store verification in database
+            if (stateVerification.discordId) {
+                const verifyResult = await robloxVerificationService.completeVerification(
+                    stateVerification.discordId,
+                    robloxUser,
+                );
+                if (!verifyResult.success) {
+                    return res.status(400).send(`
+                        <!DOCTYPE html>
+                        <html><head><title>Verification Failed</title></head>
+                        <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                            <h1>\u274c Verification Failed</h1>
+                            <p>${verifyResult.message}</p>
+                        </body></html>
+                    `);
+                }
+            }
+
+            res.send(`
+                <!DOCTYPE html>
+                <html><head><title>Verification Successful</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h1>✅ Verification Successful!</h1>
+                    <p>Your Discord account has been linked to your Roblox account.</p>
+                    <p>You can now close this window and return to Discord.</p>
+                </body></html>
+            `);
+        }
+        catch (callbackError) {
+            console.error('[OAuth] Callback error:', callbackError);
+            res.status(500).send(`
+                <!DOCTYPE html>
+                <html><head><title>Server Error</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h1>❌ Server Error</h1>
+                    <p>An unexpected error occurred during verification.</p>
+                    <p>Please try again later or contact an administrator.</p>
+                </body></html>
+            `);
+        }
+    });
+
+    // Discord OAuth callback with rate limiting
+    app.get('/oauth/discord/callback', rateLimit(10, 60000), async (req: Request, res: Response) => {
+        const code = req.query.code as string;
+        const state = req.query.state as string;
+
+        if (!code || !state) {
+            return res.status(400).send(`
+                <!DOCTYPE html>
+                <html><head><title>Invalid Request</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h1>❌ Invalid Request</h1>
+                    <p>Missing authorization parameters.</p>
+                </body></html>
+            `);
+        }
+
+        try {
+            const discordUser = await robloxVerificationService.exchangeDiscordCodeForUser(code);
+            if (!discordUser) {
+                return res.status(500).send(`
+                    <!DOCTYPE html>
+                    <html><head><title>Failed</title></head>
+                    <body style="font-family: Arial; text-align: center; padding: 50px;">
+                        <h1>❌ Failed to Link Discord Account</h1>
+                        <p>Could not retrieve your Discord information.</p>
+                        <p>Please try again.</p>
+                    </body></html>
+                `);
+            }
+
+            // Store in session and redirect to Roblox OAuth
+            if (req.session) {
+                req.session.user = { discordId: discordUser.id };
+            }
+
+            const { url } = await robloxVerificationService.generateAuthorizationUrl(
+                discordUser.id,
+                `${discordUser.username}#${discordUser.discriminator}`,
+            );
+            res.redirect(url);
+        }
+        catch (error) {
+            console.error('[OAuth] Discord callback error:', error);
+            res.status(500).send(`
+                <!DOCTYPE html>
+                <html><head><title>Error</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h1>❌ Error</h1>
+                    <p>An error occurred during Discord authentication.</p>
+                </body></html>
+            `);
+        }
     });
 
     // Root page redirect to Discord

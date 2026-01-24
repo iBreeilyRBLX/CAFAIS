@@ -4,13 +4,14 @@
  */
 
 import { GuildMember } from 'discord.js';
+import configJSON from '../config.json';
 
 /**
- * Role IDs for event-specific permissions
+ * Role IDs for event-specific permissions (from centralized config)
  */
 export const EVENT_ROLE_IDS = {
-    TRAINING_DEPARTMENT: '1454539090832789638',
-    LORE_DEPARTMENT: '1454232358814003341',
+    TRAINING_DEPARTMENT: configJSON.roles.departments.training,
+    LORE_DEPARTMENT: configJSON.roles.departments.lore,
 } as const;
 
 /**

@@ -1,10 +1,10 @@
 /* eslint-disable no-inline-comments */
 /**
  * Linked Roles Configuration
- * 
+ *
  * This file defines role hierarchies where parent roles are automatically granted
  * when a user receives any role from a defined set of child roles.
- * 
+ *
  * Example:
  * If a user receives the "Infantry" role (child), they automatically get the "Groups" role (parent)
  */
@@ -81,7 +81,7 @@ export const linkedRoleSets: LinkedRoleSet[] = [
             '1454248467282006078', // Superior Private
             '1454248608307351664', // Senior Private
             '1454248722891407472', // Private
-            '1454248763915898971', // Initiate
+            // '1454248763915898971', // Initiate
         ],
         description: 'Enlisted ranks',
     },

@@ -4,14 +4,16 @@ import ExtendedClient from '../../classes/Client';
 import { ranks } from '../../ranks/ranks';
 import { checkAndReplyPerms } from '../../ranks/permissionCheck';
 import { canPromoteToRank } from '../../ranks/permissions';
+import configJSON from '../../config.json';
+import prisma from '../../database/prisma';
 
-const DEMOTION_LOG_CHANNEL_ID = '1454639433566519306';
+const DEMOTION_LOG_CHANNEL_ID = configJSON.channels.promotionLogs;
 
 type DemotionLogDetails = {
     executorId: string;
-    executorTag: string;
+    executorTag: string; // username, not deprecated tag
     promotedId: string;
-    promotedTag: string;
+    promotedTag: string; // username, not deprecated tag
     fromRank: string;
     toRank: string;
     reason: string;
@@ -106,11 +108,20 @@ class DemoteCommand extends BaseCommand {
                 return;
             }
 
-            // Remove current rank and add next rank
+            // Perform demotion in transaction
+            // 1. Remove cooldown from old rank
+            await prisma.rankCooldown.deleteMany({
+                where: {
+                    userDiscordId: targetUser.id,
+                    rank: currentRank.prefix,
+                },
+            });
+
+            // 2. Remove current rank and add next rank
             await member.roles.remove(currentRank.discordRoleId);
             await member.roles.add(nextRank.discordRoleId);
 
-            // Update user's nickname with new rank
+            // 3. Update user's nickname with new rank
             const newNickname = `[${nextRank.prefix}] ${member.user.username}`;
             try {
                 await member.setNickname(newNickname);
@@ -121,9 +132,9 @@ class DemoteCommand extends BaseCommand {
 
             await this.logDemotion(client, {
                 executorId: interaction.user.id,
-                executorTag: interaction.user.tag,
+                executorTag: interaction.user.username,
                 promotedId: targetUser.id,
-                promotedTag: targetUser.tag,
+                promotedTag: targetUser.username,
                 fromRank: currentRank.name,
                 toRank: nextRank.name,
                 reason,
@@ -131,7 +142,7 @@ class DemoteCommand extends BaseCommand {
 
             const container = new ContainerBuilder();
             const content = new TextDisplayBuilder().setContent(
-                `# ✅ Promotion Successful\n\n${targetUser.username} has been promoted from **${currentRank.name}** to **${nextRank.name}**.`,
+                `# ✅ Demotion Successful\n\n${targetUser.username} has been demoted from **${currentRank.name}** to **${nextRank.name}**.`,
             );
             container.addTextDisplayComponents(content);
             await interaction.editReply({

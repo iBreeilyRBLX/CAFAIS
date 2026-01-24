@@ -63,6 +63,18 @@ export async function findActiveEventByTypeAndHost(eventType: string, hostDiscor
 }
 
 /**
+ * Finds an active event by host (any type)
+ * @param hostDiscordId - Discord ID of event host
+ * @returns Most recent active event or null
+ */
+export async function findActiveEventByHost(hostDiscordId: string) {
+    return prisma.event.findFirst({
+        where: { eventHostDiscordId: hostDiscordId, endTime: null },
+        orderBy: { startTime: 'desc' },
+    });
+}
+
+/**
  * Ends an event and updates it in the database
  * @param eventId - Event ID (String UUID) to end
  * @param pointsAwarded - Points to award per participant
@@ -152,5 +164,62 @@ export async function awardPointsToParticipant(
 
     // Create event participant record
     await upsertEventParticipant(eventId, user.id, points);
+}
+
+/**
+ * Awards points to multiple participants in a transaction
+ * @param eventId - Event ID
+ * @param participants - Array of Discord users
+ * @param points - Points to award to each participant
+ * @returns Array of participant info
+ */
+export async function awardPointsToParticipants(
+    eventId: string,
+    participants: User[],
+    points: number,
+): Promise<Array<{ user: User; discordId: string; username: string; points: number }>> {
+    const operations = [];
+    const participantInfos = [];
+
+    for (const user of participants) {
+        // Create or update user profile
+        operations.push(
+            prisma.userProfile.upsert({
+                where: { discordId: user.id },
+                update: {
+                    username: user.username,
+                    discriminator: user.discriminator || '0',
+                    points: { increment: points },
+                },
+                create: {
+                    discordId: user.id,
+                    username: user.username,
+                    discriminator: user.discriminator || '0',
+                    points,
+                },
+            }),
+        );
+
+        // Create event participant record
+        operations.push(
+            prisma.eventParticipant.upsert({
+                where: { eventId_userDiscordId: { eventId, userDiscordId: user.id } },
+                update: { points },
+                create: { eventId, userDiscordId: user.id, points },
+            }),
+        );
+
+        participantInfos.push({
+            user,
+            discordId: user.id,
+            username: user.username,
+            points,
+        });
+    }
+
+    // Execute all operations in a transaction for atomicity
+    await prisma.$transaction(operations);
+
+    return participantInfos;
 }
 

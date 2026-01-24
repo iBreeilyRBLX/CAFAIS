@@ -10,5 +10,19 @@
     "colors": {
         "embed": "#2f3136"
     },
-    "restVersion": "10"
+    "restVersion": "10",
+    "channels": {
+        "promotionLogs": "1454639433566519306",
+        "eventLogs": "1454639394605498449",
+        "training": "1454564611599761639"
+    },
+    "roles": {
+        "initiate": "1454248763915898971",
+        "unverified": "1454581366233628733",
+        "applicant": "1454532106565845064",
+        "departments": {
+            "training": "1454539090832789638",
+            "lore": "1454232358814003341"
+        }
+    }
 }

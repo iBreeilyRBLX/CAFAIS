@@ -77,7 +77,8 @@ class VerifyCommand extends BaseCommand {
             if (unverifiedRoleId && member.roles.cache.has(unverifiedRoleId)) {
                 try {
                     await member.roles.remove(unverifiedRoleId);
-                } catch (e) {
+                }
+                catch (e) {
                     // ignore role errors
                 }
             }
@@ -92,16 +93,37 @@ class VerifyCommand extends BaseCommand {
                 });
                 return;
             }
+            let nicknameUpdateFailed = false;
+            let nicknameError = '';
             try {
                 await member.setNickname(newNickname);
-            } catch (e) {
-                // ignore nickname errors
+            }
+            catch (e: unknown) {
+                nicknameUpdateFailed = true;
+                if (e && typeof e === 'object' && 'code' in e) {
+                    const error = e as { code: number; message?: string };
+                    if (error.code === 50013) {
+                        nicknameError = 'Missing Permissions - Bot cannot change your nickname (you may have a higher role)';
+                    }
+                    else if (error.code === 50035) {
+                        nicknameError = 'Invalid nickname format';
+                    }
+                    else {
+                        nicknameError = error.message || 'Unknown error';
+                    }
+                }
+                else {
+                    nicknameError = 'Could not update nickname';
+                }
             }
             const container = new ContainerBuilder();
             const title = new TextDisplayBuilder().setContent('# ✅ Verification Updated');
             container.addTextDisplayComponents(title);
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            const successMessage = `**Your Discord nickname has been updated!**\n\n**New Nickname**\n${newNickname}\n\n**Roblox Account**\n${robloxUser.displayName} (@${robloxUser.name})`;
+            let successMessage = `**Your Discord nickname has been updated!**\n\n**New Nickname**\n${newNickname}\n\n**Roblox Account**\n${robloxUser.displayName} (@${robloxUser.name})`;
+            if (nicknameUpdateFailed) {
+                successMessage = `**Verification Status**\n\nYour Discord account is linked to:\n**${robloxUser.displayName}** (@${robloxUser.name})\n\n⚠️ **Nickname Update Failed:** ${nicknameError}`;
+            }
             const content = new TextDisplayBuilder().setContent(successMessage);
             container.addTextDisplayComponents(content);
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));

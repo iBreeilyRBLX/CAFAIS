@@ -27,6 +27,7 @@ new ExtendedClient({
         Intents.GuildScheduledEvents,
         Intents.AutoModerationConfiguration,
         Intents.AutoModerationExecution,
+        Intents.GuildModeration,
     ],
     partials: [
         Partials.User,

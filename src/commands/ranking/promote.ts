@@ -1,24 +1,15 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, ContainerBuilder, TextDisplayBuilder, MessageFlags, GuildMember } from 'discord.js';
 import { BaseCommand } from '../../classes/BaseCommand';
 import ExtendedClient from '../../classes/Client';
-import { ranks } from '../../ranks/ranks';
 import { checkAndReplyPerms } from '../../ranks/permissionCheck';
 import { canPromoteToRank } from '../../ranks/permissions';
+import { promoteUser, getRankByPrefix, getNextRank } from '../../features/rankingManager';
+import { PromotionStatus } from '../../types/ranking';
 
-// filepath: /home/admin/cafais/src/commands/ranking/promote.ts
-
-const PROMOTION_LOG_CHANNEL_ID = '1454639433566519306';
-
-type PromotionLogDetails = {
-    executorId: string;
-    executorTag: string;
-    promotedId: string;
-    promotedTag: string;
-    fromRank: string;
-    toRank: string;
-    reason: string;
-    timestamp?: number;
-};
+/**
+ * @fileoverview Promote Command - Promotes users with centralized validation
+ * @module commands/ranking/promote
+ */
 
 class PromoteCommand extends BaseCommand {
     public options = new SlashCommandBuilder()
@@ -48,10 +39,10 @@ class PromoteCommand extends BaseCommand {
             }
 
             const targetUser = interaction.options.getUser('user', true);
-            const reason = interaction.options.getString('reason') || 'No reason provided.';
-            const member = await interaction.guild?.members.fetch(targetUser.id);
+            const reason = interaction.options.getString('reason') || 'Manual promotion';
+            const targetMember = await interaction.guild?.members.fetch(targetUser.id);
 
-            if (!member) {
+            if (!targetMember) {
                 const container = new ContainerBuilder();
                 const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nCould not fetch member data.');
                 container.addTextDisplayComponents(content);
@@ -63,9 +54,11 @@ class PromoteCommand extends BaseCommand {
             }
 
             // Find user's current rank
-            const currentRank = ranks.find(rank => member.roles.cache.has(rank.discordRoleId));
+            const currentRankInfo = Array.from(targetMember.roles.cache.values())
+                .map(role => getRankByPrefix(role.name.split(' ')[0]?.replace(/[\[\]]/g, '') || ''))
+                .find(rank => rank !== undefined);
 
-            if (!currentRank) {
+            if (!currentRankInfo) {
                 const container = new ContainerBuilder();
                 const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nUser has no rank.');
                 container.addTextDisplayComponents(content);
@@ -76,11 +69,9 @@ class PromoteCommand extends BaseCommand {
                 return;
             }
 
-            // Find current rank index
-            const currentRankIndex = ranks.findIndex(rank => rank.discordRoleId === currentRank.discordRoleId);
-
-            // Check if user is at max rank
-            if (currentRankIndex === 0) {
+            // Get next rank
+            const nextRankPrefix = getNextRank(currentRankInfo.prefix);
+            if (!nextRankPrefix) {
                 const container = new ContainerBuilder();
                 const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nUser is already at maximum rank.');
                 container.addTextDisplayComponents(content);
@@ -91,10 +82,8 @@ class PromoteCommand extends BaseCommand {
                 return;
             }
 
-            const nextRank = ranks[currentRankIndex - 1];
-
             // Check if executor can promote to this rank
-            const promotionCheck = canPromoteToRank(interaction.member as GuildMember, nextRank.prefix);
+            const promotionCheck = canPromoteToRank(interaction.member as GuildMember, nextRankPrefix);
             if (!promotionCheck.canPromote) {
                 const container = new ContainerBuilder();
                 const content = new TextDisplayBuilder().setContent(
@@ -108,92 +97,72 @@ class PromoteCommand extends BaseCommand {
                 return;
             }
 
-            // Remove current rank and add next rank
-            await member.roles.remove(currentRank.discordRoleId);
-            await member.roles.add(nextRank.discordRoleId);
-
-            // Update user's nickname with new rank
-            const newNickname = `[${nextRank.prefix}] ${member.user.username}`;
-            try {
-                await member.setNickname(newNickname);
-            }
-            catch (error) {
-                console.warn(`Could not update nickname for ${targetUser.id}`);
-            }
-
-            await this.logPromotion(client, {
+            // Use centralized promotion system with validation
+            const result = await promoteUser(client, {
+                targetMember,
+                targetUser,
+                toRank: nextRankPrefix as any, // Type assertion as rankingManager accepts string prefixes
+                fromRank: currentRankInfo.prefix as any,
                 executorId: interaction.user.id,
-                executorTag: interaction.user.tag,
-                promotedId: targetUser.id,
-                promotedTag: targetUser.tag,
-                fromRank: currentRank.name,
-                toRank: nextRank.name,
+                executorUsername: interaction.user.username,
                 reason,
+                bypassCooldown: false,
+                bypassPoints: false,
             });
 
-            const container = new ContainerBuilder();
-            const content = new TextDisplayBuilder().setContent(
-                `# ✅ Promotion Successful\n\n${targetUser.username} has been promoted from **${currentRank.name}** to **${nextRank.name}**.`,
-            );
-            container.addTextDisplayComponents(content);
-            await interaction.editReply({
-                flags: MessageFlags.IsComponentsV2,
-                components: [container],
-            });
-        }
-        catch (error) {
-            console.error('Error in /promote command:', error);
-            const container = new ContainerBuilder();
-            const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nAn error occurred during promotion. Please try again.');
-            container.addTextDisplayComponents(content);
-            await interaction.editReply({
-                flags: MessageFlags.IsComponentsV2,
-                components: [container],
-            });
-        }
-    }
+            // Handle result
+            if (result.success) {
+                const container = new ContainerBuilder();
+                const content = new TextDisplayBuilder().setContent(
+                    `# ✅ Promotion Successful\n\n${targetUser.username} has been promoted from **${currentRankInfo.name}** to **${getRankByPrefix(nextRankPrefix)?.name}**.\n\n**Reason:** ${reason}`,
+                );
+                container.addTextDisplayComponents(content);
+                await interaction.editReply({
+                    flags: MessageFlags.IsComponentsV2,
+                    components: [container],
+                });
+            } else {
+                // Handle various failure cases
+                let errorMessage = '# ❌ Promotion Failed\n\n';
+                switch (result.status) {
+                    case PromotionStatus.COOLDOWN_ACTIVE:
+                        const hours = result.cooldownRemaining ? Math.ceil(result.cooldownRemaining / (1000 * 60 * 60)) : 0;
+                        errorMessage += `User is still on cooldown. **${hours} hours** remaining before they can be promoted.`;
+                        break;
+                    case PromotionStatus.INSUFFICIENT_POINTS:
+                        errorMessage += `User needs **${result.pointsNeeded} more points** to be eligible for promotion.`;
+                        break;
+                    case PromotionStatus.RANK_LOCKED:
+                        errorMessage += `User is locked at rank **${result.fromRank}** and cannot be promoted.`;
+                        break;
+                    case PromotionStatus.ROLE_ERROR:
+                        errorMessage += `Failed to update Discord roles. ${result.message}`;
+                        break;
+                    case PromotionStatus.DATABASE_ERROR:
+                        errorMessage += `Database error occurred. ${result.message}`;
+                        break;
+                    default:
+                        errorMessage += result.message || 'An unknown error occurred.';
+                }
 
-    private buildPromotionLogContainer(details: PromotionLogDetails): ContainerBuilder {
-        const container = new ContainerBuilder();
-        const timestamp = details.timestamp ?? Math.floor(Date.now() / 1000);
-
-        const title = new TextDisplayBuilder().setContent('# Promotion Log');
-        container.addTextDisplayComponents(title);
-
-        const body = new TextDisplayBuilder().setContent(
-            '**Promoted User:** <@' + details.promotedId + '> (' + details.promotedTag + ')\n' +
-            '**From:** ' + details.fromRank + '\n' +
-            '**To:** ' + details.toRank + '\n' +
-            '**By:** <@' + details.executorId + '> (' + details.executorTag + ')\n' +
-            '**Reason:** ' + details.reason + '\n' +
-            '**Time:** <t:' + timestamp + ':F>',
-        );
-        container.addTextDisplayComponents(body);
-
-        return container;
-    }
-
-    private async logPromotion(client: ExtendedClient, details: PromotionLogDetails): Promise<void> {
-        try {
-            const channel = await client.channels.fetch(PROMOTION_LOG_CHANNEL_ID);
-
-            if (!channel || !channel.isTextBased() || !channel.isSendable()) {
-                console.warn(`Promotion log channel ${PROMOTION_LOG_CHANNEL_ID} not found or not text based`);
-                return;
+                const container = new ContainerBuilder();
+                const content = new TextDisplayBuilder().setContent(errorMessage);
+                container.addTextDisplayComponents(content);
+                await interaction.editReply({
+                    flags: MessageFlags.IsComponentsV2,
+                    components: [container],
+                });
             }
-
-            const logContainer = this.buildPromotionLogContainer({
-                ...details,
-                timestamp: Math.floor(Date.now() / 1000),
-            });
-
-            await channel.send({
-                flags: MessageFlags.IsComponentsV2,
-                components: [logContainer],
-            });
         }
         catch (error) {
-            console.error('Error logging promotion:', error);
+            console.error('[promote] Error in promote command:', error);
+            const container = new ContainerBuilder();
+            const content = new TextDisplayBuilder().setContent('# ❌ Error\n\nAn unexpected error occurred during promotion. Please try again.');
+            container.addTextDisplayComponents(content);
+            await interaction.editReply({
+                flags: MessageFlags.IsComponentsV2,
+                components: [container],
+            });
         }
     }
 }

@@ -18,11 +18,14 @@ import { Rank, PromotionRequest } from '../../types/ranking';
 import { AcademyLogData, ParticipantInfo } from '../../types/events';
 import { toggleParticipant, extractFailedParticipants } from '../../utilities';
 import { endEvent } from '../../services';
+import configJSON from '../../config.json';
+import { validateEventName, validateImageUrl, validateText } from '../../utilities/validation';
+import { logger } from '../../utilities/logger';
 
 /**
  * Initiate rank role ID (for identifying who can be promoted)
  */
-const INITIATE_ROLE_ID = '1454248763915898971';
+const INITIATE_ROLE_ID = configJSON.roles.initiate;
 
 /**
  * Points awarded for academy training completion
@@ -131,6 +134,29 @@ class AcademyLogCommand extends BaseCommand {
         const notes = interaction.options.getString('notes') || undefined;
         const imageLink = interaction.options.getString('image') || undefined;
 
+        // Validate inputs
+        const nameValidation = validateEventName(eventName);
+        if (!nameValidation.valid) {
+            await interaction.editReply({ content: `❌ ${nameValidation.error}` });
+            return;
+        }
+
+        if (notes) {
+            const notesValidation = validateText(notes, 500);
+            if (!notesValidation.valid) {
+                await interaction.editReply({ content: `❌ Notes: ${notesValidation.error}` });
+                return;
+            }
+        }
+
+        if (imageLink) {
+            const imageValidation = validateImageUrl(imageLink);
+            if (!imageValidation.valid) {
+                await interaction.editReply({ content: `❌ Image URL: ${imageValidation.error}` });
+                return;
+            }
+        }
+
         try {
             // Find the most recent Academy Training event started by this user
             const { findActiveEventByTypeAndHost } = await import('../../services');
@@ -219,34 +245,36 @@ class AcademyLogCommand extends BaseCommand {
             type TxOp = ReturnType<typeof prisma.userProfile.upsert> | ReturnType<typeof prisma.eventParticipant.upsert>;
             const prismaOps: TxOp[] = [];
 
-            // Profiles for passed Initiates
-            for (const user of passedInitiates) {
+            // First, ensure UserProfile exists for ALL participants (required for foreign key)
+            for (const user of participants) {
+                const points = passedInitiates.some(u => u.id === user.id) ? ACADEMY_PASS_POINTS : 0;
                 prismaOps.push(
                     prisma.userProfile.upsert({
                         where: { discordId: user.id },
                         update: {
                             username: user.username,
                             discriminator: user.discriminator || '0',
-                            points: { increment: ACADEMY_PASS_POINTS },
+                            ...(points > 0 ? { points: { increment: points } } : {}),
                         },
                         create: {
                             discordId: user.id,
                             username: user.username,
                             discriminator: user.discriminator || '0',
-                            points: ACADEMY_PASS_POINTS,
+                            points,
                         },
                     }),
                 );
             }
 
-            // Event participant records for all VC participants (Initiates get points if passed; others 0)
+            // Then, create EventParticipant records for all participants
             for (const user of participants) {
                 const points = passedInitiates.some(u => u.id === user.id) ? ACADEMY_PASS_POINTS : 0;
+                const failed = failedInitiatesIds.has(user.id);
                 prismaOps.push(
                     prisma.eventParticipant.upsert({
                         where: { eventId_userDiscordId: { eventId: event.id, userDiscordId: user.id } },
-                        update: { points },
-                        create: { eventId: event.id, userDiscordId: user.id, points },
+                        update: { points, failed },
+                        create: { eventId: event.id, userDiscordId: user.id, points, failed },
                     }),
                 );
 
@@ -296,11 +324,11 @@ class AcademyLogCommand extends BaseCommand {
                          `**Promoted to Private:** ${successfulPromotions.length} (2 points each)\n` +
                          `**Failed (Initiates only):** ${failedInitiatesIds.size} (0 points)\n` +
                          `**Total Participants:** ${participants.length}\n\n` +
-                         'Event logged to <#1454639394605498449>',
+                         `Event logged to <#${configJSON.channels.eventLogs}>`,
             });
         }
         catch (error) {
-            console.error('[academy-log] Failed to log academy training:', error);
+            logger.error('academy-log', 'Failed to log academy training', error);
             await interaction.editReply({
                 content: '❌ Failed to log academy training. Please try again or contact an administrator.',
             });

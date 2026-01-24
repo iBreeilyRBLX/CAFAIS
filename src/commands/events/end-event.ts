@@ -11,7 +11,10 @@ import ExtendedClient from '../../classes/Client';
 import { logEvent } from '../../features/discordLogger';
 import { EventLogData, ParticipantInfo } from '../../types/events';
 import { loadEventConfig, calculatePoints, toggleParticipant, collectVoiceChannelMembers, formatDuration } from '../../utilities';
-import { findActiveEventByNameAndType, endEvent } from '../../services';
+import { findActiveEventByTypeAndHost, endEvent, awardPointsToParticipants } from '../../services';
+import configJSON from '../../config.json';
+import { validateEventName, validateImageUrl, validateText } from '../../utilities/validation';
+import { logger } from '../../utilities/logger';
 
 class EndEventCommand extends BaseCommand {
     public options = new SlashCommandBuilder()
@@ -90,6 +93,29 @@ class EndEventCommand extends BaseCommand {
         const notes = interaction.options.getString('notes') || undefined;
         const imageLink = interaction.options.getString('image') || undefined;
 
+        // Validate inputs
+        const nameValidation = validateEventName(name);
+        if (!nameValidation.valid) {
+            await interaction.editReply({ content: `❌ ${nameValidation.error}` });
+            return;
+        }
+
+        if (notes) {
+            const notesValidation = validateText(notes, 500);
+            if (!notesValidation.valid) {
+                await interaction.editReply({ content: `❌ Notes: ${notesValidation.error}` });
+                return;
+            }
+        }
+
+        if (imageLink) {
+            const imageValidation = validateImageUrl(imageLink);
+            if (!imageValidation.valid) {
+                await interaction.editReply({ content: `❌ Image URL: ${imageValidation.error}` });
+                return;
+            }
+        }
+
         // Prevent ending Lore events with this command
         if (eventType === 'Lore') {
             await interaction.editReply({ content: '❌ Use `/end-lore-event` for lore events.' });
@@ -97,12 +123,12 @@ class EndEventCommand extends BaseCommand {
         }
 
         try {
-            // Find active event
-            const event = await findActiveEventByNameAndType(name, eventType);
+            // Find active event by type and host (user who started it)
+            const event = await findActiveEventByTypeAndHost(eventType, interaction.user.id);
 
             if (!event) {
                 await interaction.editReply({
-                    content: `❌ No active event found with name **${name}** and type **${eventType}**.`,
+                    content: `❌ No active **${eventType}** event found for your user.`,
                 });
                 return;
             }
@@ -151,42 +177,13 @@ class EndEventCommand extends BaseCommand {
             const durationMs = now.getTime() - new Date(event.startTime).getTime();
             const points = calculatePoints(durationMs, eventConfig.basePerHour, eventConfig.bonusPer30Min);
 
-            // Award points to all participants
-            const participantInfos: ParticipantInfo[] = [];
-
-            for (const user of participants) {
-                // Create or update user profile
-                await prisma.userProfile.upsert({
-                    where: { discordId: user.id },
-                    update: {
-                        username: user.username,
-                        discriminator: user.discriminator || '0',
-                        points: { increment: points },
-                    },
-                    create: {
-                        discordId: user.id,
-                        username: user.username,
-                        discriminator: user.discriminator || '0',
-                        points,
-                    },
-                });
-
-                // Create event participant record
-                await prisma.eventParticipant.upsert({
-                    where: { eventId_userDiscordId: { eventId: event.id, userDiscordId: user.id } },
-                    update: { points },
-                    create: { eventId: event.id, userDiscordId: user.id, points },
-                });
-
-                participantInfos.push({
-                    user,
-                    discordId: user.id,
-                    username: user.username,
-                    promoted: false,
-                    failed: false,
-                    points,
-                });
-            }
+            // Award points to all participants using shared service
+            const participantData = await awardPointsToParticipants(event.id, participants, points);
+            const participantInfos: ParticipantInfo[] = participantData.map(p => ({
+                ...p,
+                promoted: false,
+                failed: false,
+            }));
 
             // Update event as completed
             await endEvent(event.id, points, notes, imageLink);
@@ -217,11 +214,11 @@ class EndEventCommand extends BaseCommand {
                          `**Duration:** ${durationStr}\n` +
                          `**Participants:** ${participantInfos.length}\n` +
                          `**Points Awarded:** ${points} per participant\n\n` +
-                         'Event logged to <#1454639394605498449>',
+                         `Event logged to <#${configJSON.channels.eventLogs}>`,
             });
         }
         catch (error) {
-            console.error('[end-event] Failed to end event:', error);
+            logger.error('end-event', 'Failed to end event', error);
             await interaction.editReply({
                 content: '❌ Failed to end event. Please try again or contact an administrator.',
             });

@@ -48,6 +48,20 @@ interface Config {
         embed: ColorResolvable;
     };
     restVersion: '10';
+    channels: {
+        promotionLogs: Snowflake;
+        eventLogs: Snowflake;
+        training: Snowflake;
+    };
+    roles: {
+        initiate: Snowflake;
+        unverified: Snowflake;
+        applicant: Snowflake;
+        departments: {
+            training: Snowflake;
+            lore: Snowflake;
+        };
+    };
 }
 /**
  * ExtendedClient is extends frome `Discord.js`'s Client

@@ -42,23 +42,13 @@ const button: Button = {
         try {
 
             const now = new Date();
-            const timestamp = now.toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true,
-            });
+            const timestamp = `<t:${Math.floor(now.getTime() / 1000)}:f>`;
 
             // Get verified user info for Roblox details
             const verifiedUser = await prisma.verifiedUser.findUnique({ where: { discordId: applicantId } });
 
             const container = new ContainerBuilder();
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent('# 📋 Application Review'));
-            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`👤 **Applicant:** **${member.user.tag}** (${member.user.id}) <@${member.user.id}>`));
             if (verifiedUser) {
@@ -69,13 +59,13 @@ const button: Button = {
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent('The applicant has been banned for application denial.'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🔨 **Action taken by:** ${author.displayName}`));
+            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Timestamp:** ${timestamp}`));
 
             await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
 
             const dmContainer = new ContainerBuilder();
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('# 🔨 You Have Been Banned'));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Banned:** ${timestamp}`));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`<@${applicantId}>, your application was denied and you have been banned from the server.`));
             if (verifiedUser) {
@@ -95,15 +85,21 @@ const button: Button = {
             ));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('You may appeal this ban in the future.'));
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: false }));
+            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🔨 **Action taken by:** ${author.displayName}`));
+            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
+            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(`⏰ **Banned:** ${timestamp}`));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] }).catch(() => null);
             await guild.bans.create(applicantId, { reason: 'Application denied during review' });
 
-            // Delete the application submission record from the database
-            await prisma.applicationSubmission.delete({
+            // Update application with cooldown timestamp
+            await prisma.applicationSubmission.update({
                 where: { id: application.id },
+                data: {
+                    isPending: false,
+                    lastDeniedAt: new Date(),
+                },
             });
         }
         catch (error) {

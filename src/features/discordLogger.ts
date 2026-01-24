@@ -17,13 +17,14 @@ import {
 } from 'discord.js';
 import { EventLogData, AcademyLogData } from '../types/events';
 import { PromotionLogData, DemotionLogData } from '../types/ranking';
+import configJSON from '../config.json';
 
 /**
- * Discord channel IDs for logging
+ * Discord channel IDs for logging (from centralized config)
  */
 export const LOG_CHANNELS = {
-    PROMOTIONS: '1454639433566519306',
-    EVENTS: '1454639394605498449',
+    PROMOTIONS: configJSON.channels.promotionLogs,
+    EVENTS: configJSON.channels.eventLogs,
 } as const;
 
 /**

@@ -9,7 +9,9 @@ import { BaseCommand } from '../../classes/BaseCommand';
 import ExtendedClient from '../../classes/Client';
 import { checkAndReplyPerms } from '../../ranks/permissionCheck';
 import { getEventTypes, validateEventTypePermission, hasTrainingDepartmentRole } from '../../utilities';
-import { createEvent } from '../../services';
+import { createEvent, findActiveEventByHost } from '../../services';
+import { validateEventName } from '../../utilities/validation';
+import { logger } from '../../utilities/logger';
 
 class StartEventCommand extends BaseCommand {
     public options = new SlashCommandBuilder()
@@ -49,6 +51,15 @@ class StartEventCommand extends BaseCommand {
         const validation = validateEventTypePermission(member, eventType, hasNcoPermission);
         if (!validation.allowed) {
             await interaction.editReply({ content: validation.error });
+            return;
+        }
+
+        // Enforce only one active event per host
+        const existingActive = await findActiveEventByHost(interaction.user.id);
+        if (existingActive) {
+            await interaction.editReply({
+                content: `❌ You already have an active event (**${existingActive.eventType}** started at ${new Date(existingActive.startTime).toLocaleString()}). End it before starting another.`,
+            });
             return;
         }
 
