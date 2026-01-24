@@ -16,7 +16,11 @@ import { batchPromoteUsers } from '../../features/rankingManager';
 import { logAcademyTraining } from '../../features/discordLogger';
 import { Rank, PromotionRequest } from '../../types/ranking';
 import { AcademyLogData, ParticipantInfo } from '../../types/events';
-import { toggleParticipant, extractFailedParticipants } from '../../utilities';
+import {
+    toggleParticipant,
+    extractFailedParticipants,
+    collectVoiceChannelMembers,
+} from '../../utilities';
 import { endEvent } from '../../services';
 import configJSON from '../../config.json';
 import { validateEventName, validateImageUrl, validateText } from '../../utilities/validation';

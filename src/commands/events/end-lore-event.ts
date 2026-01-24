@@ -10,7 +10,7 @@ import ExtendedClient from '../../classes/Client';
 import { logEvent } from '../../features/discordLogger';
 import { EventLogData, ParticipantInfo } from '../../types/events';
 import { loadEventConfig, calculatePoints, toggleParticipant, collectVoiceChannelMembers, formatDuration, hasLoreDepartmentRole } from '../../utilities';
-import { findActiveEventByNameAndType, endEvent, awardPointsToParticipants } from '../../services';
+import { findActiveEventByTypeAndHost, endEvent, awardPointsToParticipants } from '../../services';
 import configJSON from '../../config.json';
 import { validateEventName, validateImageUrl, validateText } from '../../utilities/validation';
 import { logger } from '../../utilities/logger';
@@ -19,11 +19,6 @@ class EndLoreEventCommand extends BaseCommand {
     public options = new SlashCommandBuilder()
         .setName('end-lore-event')
         .setDescription('End a lore event and award points (Lore Department only)')
-        .addStringOption(option =>
-            option.setName('name')
-                .setDescription('Lore event name')
-                .setRequired(true),
-        )
         .addUserOption(option =>
             option.setName('extraparticipant1')
                 .setDescription('Add/remove participant (toggles if already in VC)')
@@ -77,17 +72,10 @@ class EndLoreEventCommand extends BaseCommand {
             return;
         }
 
-        const name = interaction.options.getString('name', true);
         const notes = interaction.options.getString('notes') || undefined;
         const imageLink = interaction.options.getString('image') || undefined;
 
         // Validate inputs
-        const nameValidation = validateEventName(name);
-        if (!nameValidation.valid) {
-            await interaction.editReply({ content: `❌ ${nameValidation.error}` });
-            return;
-        }
-
         if (notes) {
             const notesValidation = validateText(notes, 500);
             if (!notesValidation.valid) {
@@ -105,12 +93,12 @@ class EndLoreEventCommand extends BaseCommand {
         }
 
         try {
-            // Find active lore event
-            const event = await findActiveEventByNameAndType(name, 'Lore');
+            // Find active lore event by host
+            const event = await findActiveEventByTypeAndHost('Lore', interaction.user.id);
 
             if (!event) {
                 await interaction.editReply({
-                    content: `❌ No active Lore event found with name **${name}**.`,
+                    content: '❌ No active Lore event found that you started. Use `/start-event` first.',
                 });
                 return;
             }
@@ -172,7 +160,7 @@ class EndLoreEventCommand extends BaseCommand {
 
             // Log event to Discord
             const logData: EventLogData = {
-                eventName: name,
+                eventName: event.name,
                 eventType: 'Lore',
                 hostId: event.eventHostDiscordId,
                 hostUsername: interaction.user.username,
@@ -191,7 +179,7 @@ class EndLoreEventCommand extends BaseCommand {
             const durationStr = formatDuration(durationMs);
 
             await interaction.editReply({
-                content: `✅ **Lore Event Ended: ${name}**\n\n` +
+                content: `✅ **Lore Event Ended: ${event.name}**\n\n` +
                          `**Duration:** ${durationStr}\n` +
                          `**Participants:** ${participantInfos.length}\n` +
                          `**Points Awarded:** ${points} per participant\n\n` +

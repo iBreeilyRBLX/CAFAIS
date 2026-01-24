@@ -1,11 +1,3 @@
-model TrainingEventLog {
-  id          String   @id @default(uuid())
-  eventId     String
-  report      String
-  createdAt   DateTime @default(now())
-  event       Event    @relation(fields: [eventId], references: [id])
-}
-
 model VerifiedUser {
   discordId         String   @id
   robloxId          BigInt
@@ -43,7 +35,6 @@ model UserProfile {
   points       Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  events       EventAttendance[]
   eventParticipants EventParticipant[]
   loaRecords   LOA[]
   rankCooldowns RankCooldown[]
@@ -65,11 +56,9 @@ model Event {
   startTime   DateTime
   endTime     DateTime?
   pointsAwarded Int?
-  attendances EventAttendance[]
   participants EventParticipant[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  trainingEventLogs TrainingEventLog[]
   @@index([startTime])
   @@index([eventType])
   @@index([eventHostDiscordId])
@@ -88,18 +77,6 @@ model EventParticipant {
   @@index([eventId])
   @@index([userDiscordId])
   @@index([points])
-}
-
-model EventAttendance {
-  id         String   @id @default(uuid())
-  userDiscordId String
-  eventId    String
-  attendedAt DateTime    @default(now())
-  user       UserProfile @relation(fields: [userDiscordId], references: [discordId])
-  event      Event       @relation(fields: [eventId], references: [id])
-  @@unique([userDiscordId, eventId])
-  @@index([userDiscordId])
-  @@index([eventId])
 }
 
 model LOA {
