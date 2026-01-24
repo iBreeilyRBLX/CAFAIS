@@ -175,7 +175,7 @@ class AcademyLogCommand extends BaseCommand {
             }
 
             // Collect base participants from voice channel (all members)
-            let participants = Array.from(channel.members.values()).map(m => m.user);
+            let participants = collectVoiceChannelMembers(channel).map(m => m.user);
 
             // Process extra participants (toggle logic)
             for (let i = 1; i <= 5; i++) {
