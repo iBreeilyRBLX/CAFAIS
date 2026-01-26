@@ -46,7 +46,7 @@ model UserProfile {
 }
 
 model Event {
-  id          String   @id @default(uuid())
+  id          Int      @id @default(autoincrement())
   name        String
   description String?
   eventType   String
@@ -67,7 +67,7 @@ model Event {
 
 model EventParticipant {
   id         String      @id @default(uuid())
-  eventId    String
+  eventId    Int
   userDiscordId String
   points     Int         @default(0)
   failed     Boolean     @default(false)

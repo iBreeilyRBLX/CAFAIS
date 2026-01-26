@@ -145,6 +145,28 @@ class RobloxGroupService {
             throw new Error('Unable to deny Roblox group join request right now.');
         }
     }
+
+    public async removeUserFromGroup(robloxUserId: number, groupId?: number): Promise<'removed' | 'not-member'> {
+        const resolvedGroupId = groupId ?? this.defaultGroupId;
+        if (!resolvedGroupId || Number.isNaN(resolvedGroupId)) {
+            throw new Error('Roblox group id not configured. Set ROBLOX_GROUP_ID in the environment.');
+        }
+
+        await this.ensureAuthenticated();
+
+        if (!(await this.userIsMember(robloxUserId, resolvedGroupId))) {
+            return 'not-member';
+        }
+
+        try {
+            await noblox.exile(resolvedGroupId, robloxUserId);
+            return 'removed';
+        }
+        catch (error) {
+            console.error('[ERROR] Failed to remove Roblox user from group:', error);
+            throw new Error('Unable to remove Roblox user from group right now.');
+        }
+    }
 }
 
 export default RobloxGroupService.getInstance();

@@ -33,7 +33,7 @@ class UnverifyCommand extends BaseCommand {
 
             // Remove verification
             const removed = await robloxVerificationService.removeVerification(discordId);
-            
+
             if (!removed) {
                 const container = new ContainerBuilder();
                 const content = new TextDisplayBuilder()
@@ -49,9 +49,9 @@ class UnverifyCommand extends BaseCommand {
             // Update roles after successful verification removal
             const UNVERIFIED_ROLE_ID = process.env.UNVERIFIED_ROLE_ID || '1454581366233628733';
             const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '1454961614284656894';
-            
+
             // Silence verbose logs; keep only errors
-            
+
             if (!interaction.guild) {
                 console.error('[UNVERIFY] No guild available in interaction');
             }
@@ -59,13 +59,13 @@ class UnverifyCommand extends BaseCommand {
                 try {
                     const member = await interaction.guild.members.fetch(discordId);
                     // Member fetched
-                    
+
                     await member.roles.remove(VERIFIED_ROLE_ID);
                     // Verified role removed
-                    
+
                     await member.roles.add(UNVERIFIED_ROLE_ID);
                     // Unverified role added
-                    
+
                     // Roles updated
                 }
                 catch (roleError) {

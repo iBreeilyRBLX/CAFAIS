@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import prisma from '../database/prisma';
 import dotenv from 'dotenv';
+import { Guild } from 'discord.js';
 dotenv.config();
 
 interface RobloxUser {
@@ -254,9 +255,39 @@ class RobloxVerificationService {
     }
 
     /**
+     * Update Discord roles after verification
+     */
+    public async updateVerificationRoles(discordId: string, guild: Guild): Promise<{ success: boolean; error?: string }> {
+        try {
+            const UNVERIFIED_ROLE_ID = process.env.UNVERIFIED_ROLE_ID || '1454581366233628733';
+            const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '1454961614284656894';
+
+            const member = await guild.members.fetch(discordId).catch((err) => {
+                console.error(`[VERIFICATION] Failed to fetch member ${discordId}:`, err);
+                return null;
+            });
+
+            if (!member) {
+                return { success: false, error: 'Member not found in guild' };
+            }
+
+            // Remove unverified role and add verified role
+            await member.roles.remove(UNVERIFIED_ROLE_ID);
+            await member.roles.add(VERIFIED_ROLE_ID);
+
+            console.log(`[VERIFICATION] Roles updated for ${discordId}`);
+            return { success: true };
+        }
+        catch (error) {
+            console.error(`[VERIFICATION] Failed to update roles for ${discordId}:`, error);
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
+        }
+    }
+
+    /**
      * Complete verification: store Discord-Roblox link
      */
-    public async completeVerification(discordId: string, robloxUser: RobloxUser): Promise<VerificationResult> {
+    public async completeVerification(discordId: string, robloxUser: RobloxUser, guild?: Guild): Promise<VerificationResult> {
         // Check if this Roblox account is already linked to a different Discord account
         const robloxLink = await prisma.verifiedUser.findFirst({
             where: {
@@ -270,7 +301,7 @@ class RobloxVerificationService {
                 message: `❌ This Roblox account (**${robloxUser.displayName}**) is already verified with another Discord account. Alt accounts are not allowed.`,
             };
         }
-        
+
         // Ensure UserProfile exists first (required for foreign key constraint)
         try {
             console.log(`[VERIFICATION] Ensuring UserProfile exists for Discord ID: ${discordId}`);
@@ -292,7 +323,7 @@ class RobloxVerificationService {
                 message: 'Failed to create user profile. Please try again.',
             };
         }
-        
+
         // Upsert verification
         try {
             console.log(`[VERIFICATION] Creating/updating VerifiedUser for Discord ID: ${discordId}`);
@@ -312,6 +343,16 @@ class RobloxVerificationService {
                 },
             });
             console.log(`[VERIFICATION] VerifiedUser upsert successful for Discord ID: ${discordId}`);
+
+            // Update roles if guild is provided
+            if (guild) {
+                const roleResult = await this.updateVerificationRoles(discordId, guild);
+                if (!roleResult.success) {
+                    console.warn(`[VERIFICATION] Role update failed for ${discordId}: ${roleResult.error}`);
+                    // Don't fail verification if roles fail, just log it
+                }
+            }
+
             return {
                 success: true,
                 message: `✅ Verification successful! Linked to **${robloxUser.displayName}** (@${robloxUser.name})`,

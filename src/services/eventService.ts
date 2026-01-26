@@ -68,7 +68,7 @@ export async function findActiveEventByTypeAndHost(eventType: string, hostDiscor
  * @param newHostDiscordId - Discord ID of new host
  * @returns Updated event object
  */
-export async function transferEvent(eventId: string, newHostDiscordId: string) {
+export async function transferEvent(eventId: number, newHostDiscordId: string) {
     return prisma.event.update({
         where: { id: eventId },
         data: { eventHostDiscordId: newHostDiscordId },
@@ -89,14 +89,14 @@ export async function findActiveEventByHost(hostDiscordId: string) {
 
 /**
  * Ends an event and updates it in the database
- * @param eventId - Event ID (String UUID) to end
+ * @param eventId - Event ID to end
  * @param pointsAwarded - Points to award per participant
  * @param notes - Optional event notes
  * @param imageLink - Optional event image URL
  * @returns Updated event object
  */
 export async function endEvent(
-    eventId: string,
+    eventId: number,
     pointsAwarded: number,
     notes?: string,
     imageLink?: string,
@@ -144,13 +144,13 @@ export async function upsertUserProfile(
 
 /**
  * Creates or updates an event participant record
- * @param eventId - Event ID (String UUID)
+ * @param eventId - Event ID
  * @param userDiscordId - User Discord ID
  * @param points - Points to award
  * @returns Event participant record
  */
 export async function upsertEventParticipant(
-    eventId: string,
+    eventId: number,
     userDiscordId: string,
     points: number,
 ) {
@@ -163,12 +163,12 @@ export async function upsertEventParticipant(
 
 /**
  * Awards points to a participant
- * @param eventId - Event ID (String UUID)
+ * @param eventId - Event ID
  * @param user - Discord user
  * @param points - Points to award
  */
 export async function awardPointsToParticipant(
-    eventId: string,
+    eventId: number,
     user: User,
     points: number,
 ): Promise<void> {
@@ -187,7 +187,7 @@ export async function awardPointsToParticipant(
  * @returns Array of participant info
  */
 export async function awardPointsToParticipants(
-    eventId: string,
+    eventId: number,
     participants: User[],
     points: number,
 ): Promise<Array<{ user: User; discordId: string; username: string; points: number }>> {

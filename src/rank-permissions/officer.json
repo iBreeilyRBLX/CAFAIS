@@ -1,4 +1,4 @@
 {
   "type": ".INCLUDE",
-  "commands": ["help", "end-event", "academy-log", "event", "profile"]
+  "commands": ["help", "end-event", "academy-log", "event", "profile", "manualverify"]
 }

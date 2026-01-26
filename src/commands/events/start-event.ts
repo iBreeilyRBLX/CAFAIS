@@ -69,7 +69,7 @@ class StartEventCommand extends BaseCommand {
             const now = new Date();
 
             await interaction.editReply({
-                content: `✅ **${eventType}** event started at ${now.toLocaleString()}.\nEvent ID: ${event.id}`,
+                content: `✅ **${eventType}** event started at ${now.toLocaleString()}\.\nEvent ID: ${event.id}`,
             });
         }
         catch (error) {

@@ -1,4 +1,5 @@
 # Discord Bot Design Style Guide
+>
 > **CASF Bot Visual Design Standards**  
 > Last Updated: January 24, 2026
 
@@ -20,7 +21,8 @@ All containers should use accent colors to convey meaning at a glance:
 | 🟠 **Warning Orange** | `#E67E22` | `0xE67E22` | ⚠️ 📉 | Warnings, demotions, cautions, additional info | Demotions, blocking messages, notes sections |
 | 🟦 **Discord Blurple** | `#5865F2` | `0x5865F2` | 🔐 ✨ | Verification, Discord-specific features | Onboarding, verification prompts |
 
-### Usage Guidelines:
+### Usage Guidelines
+
 - **Always** use accent colors on containers via `.setAccentColor(0xHEXCODE)`
 - **Never** mix multiple accent colors in a single container
 - Use **green** for positive outcomes, **red** for errors, **orange** for warnings
@@ -44,6 +46,7 @@ All containers should use accent colors to convey meaning at a glance:
 ```
 
 **Rules:**
+
 - ✅ Use `##` (H2) for container section headers
 - ✅ Use `#` (H1) only for standalone title displays
 - ✅ Always include a relevant emoji before titles
@@ -69,6 +72,7 @@ All containers should use accent colors to convey meaning at a glance:
 ```
 
 **Rules:**
+
 - ✅ Always bold labels, keep values regular weight
 - ✅ Use italic for reasons, notes, and emphasis
 - ✅ Use `\n` for line breaks, `\n\n` for paragraph breaks
@@ -111,6 +115,7 @@ Discord allows custom emojis from your server! These look much better for specif
    - Example: `<:roblox:1234567890>` or `<:casf:9876543210>`
 
 3. **Use in code:**
+
 ```typescript
 container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
@@ -142,6 +147,7 @@ For a military/faction bot like CASF, consider adding:
 | `:application:` | Applications | 📝 |
 
 **Where to find good custom emojis:**
+
 - [emoji.gg](https://emoji.gg) - Free Discord emojis
 - [discordemoji.com](https://discordemoji.com) - Curated collections
 - Custom design on Fiverr/Upwork
@@ -164,6 +170,7 @@ For a military/faction bot like CASF, consider adding:
 ## 🏗️ Container Structure Patterns
 
 ### Single Container Pattern
+
 *Use for: Simple messages, errors, confirmations*
 
 ```typescript
@@ -187,6 +194,7 @@ container.addTextDisplayComponents(
 ```
 
 ### Multi-Container Pattern
+
 *Use for: Complex data, categorized information, logs*
 
 ```typescript
@@ -212,6 +220,7 @@ await channel.send({
 ```
 
 **Rules:**
+
 - ✅ Group related information in the same container
 - ✅ Use separate containers for different categories
 - ✅ Always use separators between sections within a container
@@ -246,6 +255,7 @@ container.addTextDisplayComponents(
 ```
 
 **Key Elements:**
+
 - Green accent color (`0x2ECC71`)
 - Clear action in title (Promotion Successful, Verified, etc.)
 - Who, what, result format
@@ -278,6 +288,7 @@ container.addTextDisplayComponents(
 ```
 
 **Key Elements:**
+
 - Red accent color (`0xE74C3C`)
 - Clear error type in title
 - **Issue:** explains what's wrong
@@ -331,6 +342,7 @@ container.addTextDisplayComponents(
 ```
 
 **Use For:**
+
 - Blocking actions (missing verification)
 - Demotions
 - Important notices
@@ -402,6 +414,7 @@ container.addActionRowComponents(buttonRow);
 ```
 
 **Button Style Guide:**
+
 | Style | Use Case | Example |
 |-------|----------|---------|
 | `Primary` (Blue) | Main actions | Start Application, Verify Now |
@@ -504,6 +517,7 @@ container.addTextDisplayComponents(
 ```
 
 ### Promotion Log
+
 ```typescript
 const container = new ContainerBuilder().setAccentColor(0x2ECC71);
 container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## 📈 Promotion'));
@@ -512,6 +526,7 @@ container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## 📈 
 ```
 
 ### Event Log
+
 ```typescript
 const container = new ContainerBuilder().setAccentColor(0xF39C12);
 container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## 🎯 Event Complete'));
@@ -519,6 +534,7 @@ container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## 🎯 
 ```
 
 ### Error Message
+
 ```typescript
 const container = new ContainerBuilder().setAccentColor(0xE74C3C);
 container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ❌ Error'));
@@ -527,6 +543,7 @@ container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:
 ```
 
 ### Application with Custom Branding
+
 ```typescript
 // Using custom emojis for branding
 import { CUSTOM_EMOJIS } from '../config/emojis';
@@ -561,11 +578,13 @@ container.addTextDisplayComponents(
 ### Getting Emoji IDs
 
 **Method 1: Developer Mode**
+
 1. Enable Developer Mode (User Settings → Advanced → Developer Mode)
 2. Right-click emoji → Copy ID
 3. Format: `<:name:ID>` or `<a:name:ID>` (animated)
 
 **Method 2: Backslash Trick**
+
 1. Type `\:emoji_name:` in Discord
 2. Discord will show you the full format
 3. Copy and use in your code
@@ -573,6 +592,7 @@ container.addTextDisplayComponents(
 ### Emoji Best Practices
 
 ✅ **DO:**
+
 - Upload 512x512 PNG images for best quality
 - Use transparent backgrounds
 - Name emojis clearly (`:casf_logo:` not `:logo1:`)
@@ -582,6 +602,7 @@ container.addTextDisplayComponents(
 - Use SVG → PNG converters for crisp icons
 
 ❌ **DON'T:**
+
 - Don't upload copyrighted images without permission
 - Don't use emoji names with special characters
 - Don't make emojis too detailed (won't be visible when small)

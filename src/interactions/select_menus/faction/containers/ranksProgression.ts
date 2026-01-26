@@ -18,7 +18,6 @@ export const buildRanksProgressionContainer = () => {
 
     container.addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-            '**📌 Status:** *Temporary listing*\n\n' +
             '**🎖️ High Command & Leadership**\n' +
             '├ <@&1454231103425613874> **Overseer** — *Can’t be obtained*\n' +
             '├ <@&1454232393451048960> **Leader of the Armed Forces, Operational Head** — *Appointed by the Prime Executive*\n' +
