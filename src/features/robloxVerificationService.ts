@@ -225,6 +225,35 @@ class RobloxVerificationService {
     }
 
     /**
+     * Fetch Roblox user info by Roblox user ID (public profile)
+     */
+    public async getRobloxUserById(robloxId: number): Promise<RobloxUser | null> {
+        try {
+            const response = await fetch(`${this.ROBLOX_API_BASE}/${robloxId}`);
+            if (!response.ok) {
+                console.error('Failed to fetch Roblox user by ID:', response.status);
+                return null;
+            }
+
+            const data = (await response.json()) as { id: number; name?: string; displayName?: string };
+            if (!data?.id) {
+                console.error('Roblox user by ID returned invalid data:', data);
+                return null;
+            }
+
+            return {
+                id: data.id,
+                name: data.name || `User${data.id}`,
+                displayName: data.displayName || data.name || `User${data.id}`,
+            };
+        }
+        catch (error) {
+            console.error('Error fetching Roblox user by ID:', error);
+            return null;
+        }
+    }
+
+    /**
      * Complete verification: store Discord-Roblox link
      */
     public async completeVerification(discordId: string, robloxUser: RobloxUser): Promise<VerificationResult> {
@@ -241,27 +270,61 @@ class RobloxVerificationService {
                 message: `❌ This Roblox account (**${robloxUser.displayName}**) is already verified with another Discord account. Alt accounts are not allowed.`,
             };
         }
+        
+        // Ensure UserProfile exists first (required for foreign key constraint)
+        try {
+            console.log(`[VERIFICATION] Ensuring UserProfile exists for Discord ID: ${discordId}`);
+            await prisma.userProfile.upsert({
+                where: { discordId },
+                update: {},
+                create: {
+                    discordId,
+                    username: 'Unknown', // Will be updated when user interacts with bot
+                    discriminator: '0000',
+                },
+            });
+            console.log(`[VERIFICATION] UserProfile upsert successful for Discord ID: ${discordId}`);
+        }
+        catch (profileError) {
+            console.error(`[VERIFICATION] Failed to upsert UserProfile for ${discordId}:`, profileError);
+            return {
+                success: false,
+                message: 'Failed to create user profile. Please try again.',
+            };
+        }
+        
         // Upsert verification
-        await prisma.verifiedUser.upsert({
-            where: { discordId },
-            update: {
-                robloxId: BigInt(robloxUser.id),
-                robloxUsername: robloxUser.name,
-                robloxDisplayName: robloxUser.displayName,
-                updatedAt: new Date(),
-            },
-            create: {
-                discordId,
-                robloxId: BigInt(robloxUser.id),
-                robloxUsername: robloxUser.name,
-                robloxDisplayName: robloxUser.displayName,
-            },
-        });
-        return {
-            success: true,
-            message: `✅ Verification successful! Linked to **${robloxUser.displayName}** (@${robloxUser.name})`,
-            userData: robloxUser,
-        };
+        try {
+            console.log(`[VERIFICATION] Creating/updating VerifiedUser for Discord ID: ${discordId}`);
+            await prisma.verifiedUser.upsert({
+                where: { discordId },
+                update: {
+                    robloxId: BigInt(robloxUser.id),
+                    robloxUsername: robloxUser.name,
+                    robloxDisplayName: robloxUser.displayName,
+                    updatedAt: new Date(),
+                },
+                create: {
+                    discordId,
+                    robloxId: BigInt(robloxUser.id),
+                    robloxUsername: robloxUser.name,
+                    robloxDisplayName: robloxUser.displayName,
+                },
+            });
+            console.log(`[VERIFICATION] VerifiedUser upsert successful for Discord ID: ${discordId}`);
+            return {
+                success: true,
+                message: `✅ Verification successful! Linked to **${robloxUser.displayName}** (@${robloxUser.name})`,
+                userData: robloxUser,
+            };
+        }
+        catch (verificationError) {
+            console.error(`[VERIFICATION] Failed to upsert VerifiedUser for ${discordId}:`, verificationError);
+            return {
+                success: false,
+                message: 'Failed to save verification data. Please try again.',
+            };
+        }
     }
 
     /**

@@ -206,173 +206,6 @@ export function setupOAuthServer(client: ExtendedClient): void {
         });
     });
 
-    // OAuth callback with improved error handling
-    app.get('/oauth/callback', rateLimit(10, 60000), async (req: Request, res: Response) => {
-        const code = req.query.code as string;
-        const state = req.query.state as string;
-        const error = req.query.error as string;
-
-        if (error) {
-            console.error('[OAuth] User cancelled or error occurred:', error);
-            return res.status(400).send(`
-                <!DOCTYPE html>
-                <html><head><title>Verification Cancelled</title></head>
-                <body style="font-family: Arial; text-align: center; padding: 50px;">
-                    <h1>❌ Verification Cancelled</h1>
-                    <p>You cancelled the verification process.</p>
-                    <p><a href="/">Try again</a></p>
-                </body></html>
-            `);
-        }
-
-        if (!code || !state) {
-            console.error('[OAuth] Missing code or state in callback');
-            return res.status(400).send(`
-                <!DOCTYPE html>
-                <html><head><title>Invalid Request</title></head>
-                <body style='font-family: Arial; text-align: center; padding: 50px;'>
-                    <h1>❌ Invalid Request</h1>
-                    <p>Missing authorization code or state token.</p>
-                    <p>Please start the verification process again.</p>
-                </body></html>
-            `);
-        }
-
-        try {
-            const stateVerification = await robloxVerificationService.verifyStateToken(state);
-            if (!stateVerification.valid) {
-                return res.status(400).send(`
-                    <!DOCTYPE html>
-                    <html><head><title>Invalid State</title></head>
-                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
-                        <h1>❌ Invalid or Expired Link</h1>
-                        <p>This verification link has expired or is invalid.</p>
-                        <p>Please use the <code>/verify</code> command in Discord to get a new link.</p>
-                    </body></html>
-                `);
-            }
-
-            const accessToken = await robloxVerificationService.exchangeCodeForToken(code);
-            if (!accessToken) {
-                return res.status(500).send(`
-                    <!DOCTYPE html>
-                    <html><head><title>Verification Failed</title></head>
-                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
-                        <h1>\u274c Verification Failed</h1>
-                        <p>Failed to exchange authorization code. Please try again.</p>
-                        <p>If the problem persists, contact an administrator.</p>
-                    </body></html>
-                `);
-            }
-
-            // Get Roblox user info and complete verification
-            const robloxUser = await robloxVerificationService.getRobloxUserFromToken(accessToken);
-            if (!robloxUser) {
-                return res.status(500).send(`
-                    <!DOCTYPE html>
-                    <html><head><title>Verification Failed</title></head>
-                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
-                        <h1>\u274c Verification Failed</h1>
-                        <p>Could not retrieve your Roblox information.</p>
-                    </body></html>
-                `);
-            }
-
-            // Store verification in database
-            if (stateVerification.discordId) {
-                const verifyResult = await robloxVerificationService.completeVerification(
-                    stateVerification.discordId,
-                    robloxUser,
-                );
-                if (!verifyResult.success) {
-                    return res.status(400).send(`
-                        <!DOCTYPE html>
-                        <html><head><title>Verification Failed</title></head>
-                        <body style='font-family: Arial; text-align: center; padding: 50px;'>
-                            <h1>\u274c Verification Failed</h1>
-                            <p>${verifyResult.message}</p>
-                        </body></html>
-                    `);
-                }
-            }
-
-            res.send(`
-                <!DOCTYPE html>
-                <html><head><title>Verification Successful</title></head>
-                <body style="font-family: Arial; text-align: center; padding: 50px;">
-                    <h1>✅ Verification Successful!</h1>
-                    <p>Your Discord account has been linked to your Roblox account.</p>
-                    <p>You can now close this window and return to Discord.</p>
-                </body></html>
-            `);
-        }
-        catch (callbackError) {
-            console.error('[OAuth] Callback error:', callbackError);
-            res.status(500).send(`
-                <!DOCTYPE html>
-                <html><head><title>Server Error</title></head>
-                <body style="font-family: Arial; text-align: center; padding: 50px;">
-                    <h1>❌ Server Error</h1>
-                    <p>An unexpected error occurred during verification.</p>
-                    <p>Please try again later or contact an administrator.</p>
-                </body></html>
-            `);
-        }
-    });
-
-    // Discord OAuth callback with rate limiting
-    app.get('/oauth/discord/callback', rateLimit(10, 60000), async (req: Request, res: Response) => {
-        const code = req.query.code as string;
-        const state = req.query.state as string;
-
-        if (!code || !state) {
-            return res.status(400).send(`
-                <!DOCTYPE html>
-                <html><head><title>Invalid Request</title></head>
-                <body style="font-family: Arial; text-align: center; padding: 50px;">
-                    <h1>❌ Invalid Request</h1>
-                    <p>Missing authorization parameters.</p>
-                </body></html>
-            `);
-        }
-
-        try {
-            const discordUser = await robloxVerificationService.exchangeDiscordCodeForUser(code);
-            if (!discordUser) {
-                return res.status(500).send(`
-                    <!DOCTYPE html>
-                    <html><head><title>Failed</title></head>
-                    <body style="font-family: Arial; text-align: center; padding: 50px;">
-                        <h1>❌ Failed to Link Discord Account</h1>
-                        <p>Could not retrieve your Discord information.</p>
-                        <p>Please try again.</p>
-                    </body></html>
-                `);
-            }
-
-            // Store in session and redirect to Roblox OAuth
-            if (req.session) {
-                req.session.user = { discordId: discordUser.id };
-            }
-
-            const { url } = await robloxVerificationService.generateAuthorizationUrl(
-                discordUser.id,
-                `${discordUser.username}#${discordUser.discriminator}`,
-            );
-            res.redirect(url);
-        }
-        catch (error) {
-            console.error('[OAuth] Discord callback error:', error);
-            res.status(500).send(`
-                <!DOCTYPE html>
-                <html><head><title>Error</title></head>
-                <body style="font-family: Arial; text-align: center; padding: 50px;">
-                    <h1>❌ Error</h1>
-                    <p>An error occurred during Discord authentication.</p>
-                </body></html>
-            `);
-        }
-    });
 
     // Root page redirect to Discord
     app.get('/', (req: Request, res: Response) => {
@@ -380,7 +213,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
     });
 
     // Discord OAuth callback - Step 1 of dual OAuth
-    app.get('/oauth/discord/callback', async (req: Request, res: Response) => {
+    app.get('/oauth/discord/callback', rateLimit(10, 60000), async (req: Request, res: Response) => {
         try {
             const { code, state, error, error_description } = req.query as Record<string, string>;
 
@@ -449,7 +282,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
                 );
             }
 
-            console.info(`✅ Discord OAuth verified for ${discordUser.username} (${discordUser.id}), proceeding to Roblox OAuth...`);
+            // Proceed silently to Roblox OAuth
 
             // Generate new state token for Roblox OAuth step
             const robloxAuthData = await robloxVerificationService.generateAuthorizationUrl(discordUser.id, discordUser.username);
@@ -470,7 +303,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
     });
 
     // Roblox OAuth callback - Step 2 of dual OAuth
-    app.get('/oauth/callback', async (req: Request, res: Response) => {
+    app.get('/oauth/callback', rateLimit(10, 60000), async (req: Request, res: Response) => {
         try {
             const { code, state, error, error_description } = req.query as Record<string, string>;
 
@@ -604,9 +437,27 @@ export function setupOAuthServer(client: ExtendedClient): void {
                 );
             }
 
+            // Post-processing: nickname and roles
+
             // Try to update Discord nickname and grant roles
             try {
-                const discordMember = await client.guilds.cache.first()?.members.fetch(discordId);
+                const guildId = process.env.GUILD_ID || '';
+                const guild = guildId ? client.guilds.cache.get(guildId) : null;
+                if (!guild) {
+                    console.error(`[OAUTH] Guild not found (GUILD_ID=${guildId}). Cannot grant roles for ${discordId}`);
+                    return res.status(500).send('<html><body style="font-family: Arial; text-align:center; padding:50px;"><h1>❌ Verification Error</h1><p>Server is missing guild configuration. Please contact an administrator.</p></body></html>');
+                }
+
+                const discordMember = await guild.members.fetch(discordId).catch((err) => {
+                    console.error(`[OAUTH] Failed to fetch member ${discordId}:`, err);
+                    return null;
+                });
+
+                if (!discordMember) {
+                    console.error(`[OAUTH] Member not found in guild ${guild.id} for ${discordId}`);
+                    return res.status(404).send('<html><body style="font-family: Arial; text-align:center; padding:50px;"><h1>❌ Verification Error</h1><p>Could not find your Discord account in the server. Please rejoin and try again.</p></body></html>');
+                }
+
                 if (discordMember) {
                     // Find user's rank by checking roles
                     let userRank = '';
@@ -625,9 +476,6 @@ export function setupOAuthServer(client: ExtendedClient): void {
 
                         if (newNickname.length <= 32) {
                             await discordMember.setNickname(newNickname);
-                            console.info(
-                                `Updated nickname for Discord user ${discordId}: "${discordMember.nickname || 'none'}" -> "${newNickname}"`,
-                            );
                         }
                         else {
                             console.error(
@@ -650,6 +498,7 @@ export function setupOAuthServer(client: ExtendedClient): void {
 
                         // Add verified role to everyone
                         await discordMember.roles.add(VERIFIED_ROLE);
+                        
                         await discordMember.roles.remove(UNVERIFIED_ROLE);
 
                         // Add unranked role only if they don't have a rank
@@ -657,13 +506,17 @@ export function setupOAuthServer(client: ExtendedClient): void {
                         if (!hasRank) {
                             await discordMember.roles.add(UNRANKED_ROLE);
                         }
+                        else {
+                            // Already ranked; skip adding unranked role
+                        }
 
-                        console.info(`Granted verification roles for Discord user ${discordId}`);
+                        // Roles updated successfully
                     }
                     catch (roleError) {
                         console.error(
-                            `Failed to grant roles for Discord user ${discordId}: ${roleError instanceof Error ? roleError.message : String(roleError)}`,
+                            `[OAUTH] Failed to grant roles for Discord user ${discordId}: ${roleError instanceof Error ? roleError.message : String(roleError)}`,
                         );
+                        console.error('[OAUTH] Full error:', roleError);
                     }
                 }
             }

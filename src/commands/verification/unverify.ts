@@ -25,6 +25,7 @@ class UnverifyCommand extends BaseCommand {
                     .setContent('❌ You are not verified yet. Run `/verify` to verify your account.');
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
+                    flags: MessageFlags.IsComponentsV2,
                     components: [container],
                 });
                 return;
@@ -32,23 +33,45 @@ class UnverifyCommand extends BaseCommand {
 
             // Remove verification
             const removed = await robloxVerificationService.removeVerification(discordId);
-            const UNVERIFIED_ROLE_ID = process.env.UNVERIFIED_ROLE_ID || '1454581366233628733';
-            const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '1454961614284656894';
-            const guild = client.guilds.cache.get(process.env.GUILD_ID || '');
-            const member = guild ? await guild.members.fetch(discordId).catch(() => null) : null;
-            if (member) {
-                await member.roles.add(UNVERIFIED_ROLE_ID);
-                await member.roles.remove(VERIFIED_ROLE_ID);
-            }
+            
             if (!removed) {
                 const container = new ContainerBuilder();
                 const content = new TextDisplayBuilder()
                     .setContent('❌ Failed to remove verification. Please try again.');
                 container.addTextDisplayComponents(content);
                 await interaction.editReply({
+                    flags: MessageFlags.IsComponentsV2,
                     components: [container],
                 });
                 return;
+            }
+
+            // Update roles after successful verification removal
+            const UNVERIFIED_ROLE_ID = process.env.UNVERIFIED_ROLE_ID || '1454581366233628733';
+            const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '1454961614284656894';
+            
+            // Silence verbose logs; keep only errors
+            
+            if (!interaction.guild) {
+                console.error('[UNVERIFY] No guild available in interaction');
+            }
+            else {
+                try {
+                    const member = await interaction.guild.members.fetch(discordId);
+                    // Member fetched
+                    
+                    await member.roles.remove(VERIFIED_ROLE_ID);
+                    // Verified role removed
+                    
+                    await member.roles.add(UNVERIFIED_ROLE_ID);
+                    // Unverified role added
+                    
+                    // Roles updated
+                }
+                catch (roleError) {
+                    console.error('[UNVERIFY] Failed to update roles during unverification:', roleError);
+                    // Continue even if role update fails
+                }
             }
 
             const container = new ContainerBuilder();
@@ -60,7 +83,7 @@ class UnverifyCommand extends BaseCommand {
                 components: [container],
             });
 
-            console.info(`Verification removed for user ${interaction.user.tag} (${discordId})`);
+            // Verification removed
         }
         catch (error) {
             console.error('Error in unverify command:', error);
@@ -70,6 +93,7 @@ class UnverifyCommand extends BaseCommand {
             container.addTextDisplayComponents(content);
             try {
                 await interaction.editReply({
+                    flags: MessageFlags.IsComponentsV2,
                     components: [container],
                 });
             }

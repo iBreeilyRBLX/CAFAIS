@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, GuildMember, SlashCommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, GuildMember, SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { ChatInputCommand } from '../interfaces';
 import ExtendedClient from '../classes/Client';
 
@@ -11,7 +11,8 @@ export abstract class BaseCommand implements ChatInputCommand {
         this.currentInteraction = interaction;
 
         try {
-            await interaction.deferReply({ ephemeral: this.isEphemeral() });
+            const flags = this.isEphemeral() ? MessageFlags.Ephemeral | MessageFlags.IsComponentsV2 : MessageFlags.IsComponentsV2;
+            await interaction.deferReply({ flags });
             await this.executeCommand(client, interaction);
         }
         catch (error) {
