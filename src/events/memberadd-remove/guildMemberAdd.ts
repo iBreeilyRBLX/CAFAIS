@@ -31,7 +31,7 @@ const event: Event = {
             '2. Fill out the application form in the verification channel\n' +
             '3. Wait for staff review and approval\n\n' +
             '**After Verification, you\'ll gain access to:**\n' +
-            '⁍ Application Center - Apply to join the faction\n\n' +
+            '⁍ Training Center - Where you will do a basic training and join the faction!\n\n' +
             '**Need Help?**\n' +
             'Contact a High Command member for assistance\n\n',
             );

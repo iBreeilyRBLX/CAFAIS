@@ -18,7 +18,7 @@ interface TaseCheckResult {
 
 class TaseService {
     private static instance: TaseService;
-    private readonly apiBase = 'https://tase.thegoober.xyz/api/v2';
+    private readonly apiBase = 'https://api.tasebot.org/api/v2';
 
     private constructor() {}
 
