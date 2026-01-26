@@ -95,12 +95,8 @@ class ManualVerifyCommand extends BaseCommand {
                 return;
             }
 
-            // Complete verification using the service (roles will be updated automatically)
-            const result = await robloxVerificationService.completeVerification(
-                discordId,
-                robloxUser,
-                interaction.guild || undefined,
-            );
+            // Complete verification using the service
+            const result = await robloxVerificationService.completeVerification(discordId, robloxUser);
 
             if (!result.success) {
                 const container = new ContainerBuilder();
@@ -112,6 +108,25 @@ class ManualVerifyCommand extends BaseCommand {
                     components: [container],
                 });
                 return;
+            }
+
+            // Update roles after successful verification
+            const UNVERIFIED_ROLE_ID = process.env.UNVERIFIED_ROLE_ID || '1454581366233628733';
+            const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '1454961614284656894';
+
+            if (!interaction.guild) {
+                console.error('[MANUALVERIFY] No guild available in interaction');
+            }
+            else {
+                try {
+                    const targetMember = await interaction.guild.members.fetch(discordId);
+
+                    await targetMember.roles.remove(UNVERIFIED_ROLE_ID);
+                    await targetMember.roles.add(VERIFIED_ROLE_ID);
+                }
+                catch (roleError) {
+                    console.error('[MANUALVERIFY] Failed to update roles:', roleError);
+                }
             }
 
             // Send success message

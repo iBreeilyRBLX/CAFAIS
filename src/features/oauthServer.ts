@@ -423,8 +423,8 @@ export function setupOAuthServer(client: ExtendedClient): void {
                 );
             }
 
-            // Complete verification in database (roles will be updated automatically)
-            const verificationResult = await robloxVerificationService.completeVerification(discordId, robloxUser, guild);
+            // Complete verification in database
+            const verificationResult = await robloxVerificationService.completeVerification(discordId, robloxUser);
             if (!verificationResult.success) {
                 return res.status(500).send(
                     `<html>
@@ -437,9 +437,9 @@ export function setupOAuthServer(client: ExtendedClient): void {
                 );
             }
 
-            // Post-processing: nickname and unranked role
+            // Post-processing: nickname and roles
 
-            // Try to update Discord nickname
+            // Try to update Discord nickname and grant roles
             try {
                 const guildId = process.env.GUILD_ID || '';
                 const guild = guildId ? client.guilds.cache.get(guildId) : null;
@@ -490,14 +490,24 @@ export function setupOAuthServer(client: ExtendedClient): void {
                         // Continue with role granting even if nickname fails
                     }
 
-                    // Grant unranked role if needed (verified role already handled by completeVerification)
+                    // Grant verification roles (always attempt regardless of nickname result)
                     try {
+                        const VERIFIED_ROLE = process.env.VERIFIED_ROLE_ID || '1454961614284656894';
                         const UNRANKED_ROLE = process.env.UNRANKED_ROLE_ID || '1454532106565845064';
+                        const UNVERIFIED_ROLE = process.env.UNVERIFIED_ROLE_ID || '1454581366233628733';
+
+                        // Add verified role to everyone
+                        await discordMember.roles.add(VERIFIED_ROLE);
+
+                        await discordMember.roles.remove(UNVERIFIED_ROLE);
 
                         // Add unranked role only if they don't have a rank
                         const hasRank = ranks.some((rank) => discordMember.roles.cache.has(rank.discordRoleId));
                         if (!hasRank) {
                             await discordMember.roles.add(UNRANKED_ROLE);
+                        }
+                        else {
+                            // Already ranked; skip adding unranked role
                         }
 
                         // Roles updated successfully
