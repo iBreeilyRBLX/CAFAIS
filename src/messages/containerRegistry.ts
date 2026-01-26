@@ -148,7 +148,7 @@ export const containerRegistry: Record<number, () => ContainerBuilder> = {
         const welcome = new TextDisplayBuilder()
             .setContent(
                 '## Welcome to Cascadian Armed Forces\n' +
-                '**Founders:** @Bromack0304 and @valktovia\n' +
+                '**Founders:** <@266377167875735553> and <@824154609702141963>\n' +
                 '**Founded:** *December 20, 2025*',
             );
         container.addTextDisplayComponents(welcome);

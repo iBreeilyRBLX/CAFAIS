@@ -9,6 +9,11 @@
       "id": 2,
       "name": "Application Center",
       "channelId": "1454533311245320334"
+    },
+    {
+      "id": 3,
+      "name": "Main Information Hub",
+      "channelId": "1454535180596285588"
     }
   ]
 }

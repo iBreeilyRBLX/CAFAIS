@@ -1,4 +1,4 @@
-import { ContainerBuilder, MessageFlags } from 'discord.js';
+import { ContainerBuilder, MessageFlags, InteractionReplyOptions } from 'discord.js';
 import { StringSelectMenu } from '../../../interfaces';
 import { buildStartGuideContainer } from './containers/startGuide';
 import { buildBranchesDivisionsContainer } from './containers/branchesDivisions';
@@ -39,8 +39,8 @@ const selectMenu: StringSelectMenu = {
             break;
         }
 
-        const payload = {
-            flags: MessageFlags.IsComponentsV2,
+        const payload: InteractionReplyOptions = {
+            flags: Number(MessageFlags.IsComponentsV2),
             components: [container],
             ephemeral: true,
         };
