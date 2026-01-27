@@ -165,19 +165,40 @@ async function flushPromotionLogs(client: Client): Promise<void> {
                 .setContent(`### ${transition}\n*${logs.length} ${logs.length > 1 ? 'promotions' : 'promotion'}*`);
             container.addTextDisplayComponents(groupHeader);
 
-            // Individual promotions in this group
-            let promotionsList = '';
+            // Individual promotions in this group (grouped by executor + reason + points)
+            const groupedDetails = new Map<string, {
+                users: string[];
+                executorId: string;
+                reason: string;
+                timestamp: Date;
+                pointsAwarded?: number;
+            }>();
+
             for (const log of logs) {
-                promotionsList += `**<@${log.userId}>**\n`;
-                promotionsList += `├ By: <@${log.executorId}>\n`;
-                promotionsList += `├ Reason: *${log.reason || 'No reason provided'}*\n`;
-                promotionsList += `├ ${formatDiscordTimestamp(log.timestamp)}`;
-                if (log.pointsAwarded) {
-                    promotionsList += `\n└ Points: **+${log.pointsAwarded}**`;
+                const key = `${log.executorId}|${log.reason || 'No reason provided'}|${log.pointsAwarded ?? 'none'}`;
+                const existing = groupedDetails.get(key);
+                if (existing) {
+                    existing.users.push(log.userId);
+                    // Keep the earliest timestamp for display consistency
+                    if (log.timestamp < existing.timestamp) existing.timestamp = log.timestamp;
                 }
                 else {
-                    promotionsList += '\n';
+                    groupedDetails.set(key, {
+                        users: [log.userId],
+                        executorId: log.executorId,
+                        reason: log.reason || 'No reason provided',
+                        timestamp: log.timestamp,
+                        pointsAwarded: log.pointsAwarded,
+                    });
                 }
+            }
+
+            let promotionsList = '';
+            for (const entry of groupedDetails.values()) {
+                promotionsList += `**${entry.users.map(id => `<@${id}>`).join(', ')}**\n`;
+                promotionsList += `├ By: <@${entry.executorId}>\n`;
+                promotionsList += `├ Reason: *${entry.reason}*\n`;
+                promotionsList += `└ ${formatDiscordTimestamp(entry.timestamp)}`;
                 promotionsList += '\n\n';
             }
 
@@ -464,32 +485,12 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
                 `**Host:** <@${data.hostId}> (${data.hostUsername})\n` +
                 `**Started:** ${formatDiscordTimestamp(data.startTime)}\n` +
                 (data.endTime ? `**Ended:** ${formatDiscordTimestamp(data.endTime)}\n` : '') +
-                `**Duration:** ${duration}`,
+                `**Duration:** ${duration}` +
+                `**Total Participants:** ${data.participants.length}\n` +
+                `**Passed:** ${data.promotedCount} (2 points each)\n` +
+                `**Failed:** ${data.failedCount} (0 points)\n`,
             );
         headerContainer.addTextDisplayComponents(hostInfo);
-
-        // Create stats container with accent color (green for success - 0x2ECC71)
-        const statsContainer = new ContainerBuilder()
-            .setAccentColor(0x2ECC71);
-
-        const statsTitle = new TextDisplayBuilder()
-            .setContent('## Training Results');
-        statsContainer.addTextDisplayComponents(statsTitle);
-
-        const statsSeparator = new SeparatorBuilder({
-            spacing: SeparatorSpacingSize.Small,
-            divider: true,
-        });
-        statsContainer.addSeparatorComponents(statsSeparator);
-
-        const stats = new TextDisplayBuilder()
-            .setContent(
-                `**Total Participants:** ${data.participants.length}\n` +
-                `**Promoted to Private:** ${data.promotedCount} (2 points each)\n` +
-                `**Failed:** ${data.failedCount} (0 points)\n` +
-                `**Points Awarded:** ${data.promotedCount * 2}`,
-            );
-        statsContainer.addTextDisplayComponents(stats);
 
         // Create participants container with accent color (purple - 0x9B59B6)
         const participantsContainer = new ContainerBuilder()
@@ -569,7 +570,7 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
             .setContent('# 🎓 Academy Training Log');
 
         // Assemble all components
-        const components = [titleDisplay, headerContainer, statsContainer, participantsContainer];
+        const components = [titleDisplay, headerContainer, participantsContainer];
         if (notesContainer) {
             components.push(notesContainer);
         }

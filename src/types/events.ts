@@ -23,6 +23,7 @@ export enum EventType {
 export interface EventPointConfig {
     basePerHour: number;
     bonusPer30Min: number;
+    maxPoints: number;
     description: string;
 }
 

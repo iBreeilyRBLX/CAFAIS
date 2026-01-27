@@ -45,16 +45,22 @@ export function isValidEventType(eventType: string): boolean {
  * @param durationMs - Event duration in milliseconds
  * @param base - Base points per hour
  * @param per30 - Bonus points per 30 minutes
+ * @param maxPoints - Maximum points allowed for this event type (optional)
  * @returns Calculated points
  * @example
  * // 2 hours 30 minutes, base=2, per30=1
  * calculatePoints(9000000, 2, 1) // Returns 5
+ * // With max points limit
+ * calculatePoints(9000000, 2, 1, 4) // Returns 4
  */
-export function calculatePoints(durationMs: number, base: number, per30: number): number {
+export function calculatePoints(durationMs: number, base: number, per30: number, maxPoints?: number): number {
     const hours = Math.floor(durationMs / (1000 * 60 * 60));
     const mins = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
     let points = hours * base;
     points += Math.floor(mins / 30) * per30;
+    if (maxPoints !== undefined && points > maxPoints) {
+        points = maxPoints;
+    }
     return points;
 }
 

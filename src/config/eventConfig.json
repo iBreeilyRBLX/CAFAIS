@@ -3,31 +3,37 @@
     "Combat Patrol": {
       "basePerHour": 2,
       "bonusPer30Min": 1,
+      "maxPoints": 4,
       "description": "Combat-focused patrol missions"
     },
     "Money Grinding": {
       "basePerHour": 2,
       "bonusPer30Min": 1,
+      "maxPoints": 3,
       "description": "Resource gathering operations"
     },
     "Training": {
       "basePerHour": 2,
       "bonusPer30Min": 1,
+      "maxPoints": 2,
       "description": "Standard training sessions"
     },
     "Academy Training": {
       "basePerHour": 2,
       "bonusPer30Min": 1,
+      "maxPoints": 2,
       "description": "Academy initiate training (training department only)"
     },
     "Lore": {
       "basePerHour": 2,
       "bonusPer30Min": 1,
+      "maxPoints": 6,
       "description": "Lore-related roleplay events"
     },
     "Other": {
       "basePerHour": 2,
       "bonusPer30Min": 1,
+      "maxPoints": 3,
       "description": "Miscellaneous events"
     }
   }

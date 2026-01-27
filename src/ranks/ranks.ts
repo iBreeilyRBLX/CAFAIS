@@ -13,7 +13,7 @@ export interface Rank {
 
 export const ranks: Rank[] = [
     // HICOM: PRX, MAR, GEN, LTG (can promote to any rank)
-    { name: 'Bot Developer', prefix: 'BOT', discordRoleId: '1454231933994274900', permissionSet: '/rank-permissions/bot-dev.json' },
+    { name: 'Bot Developer', prefix: 'BOT', discordRoleId: '1454276879035924572', permissionSet: '/rank-permissions/bot-dev.json' },
     { name: 'Prime Executive', prefix: 'PRX', discordRoleId: '1454231103425613874', permissionSet: '/rank-permissions/hicom.json' },
     { name: 'Marshal', prefix: 'MAR', discordRoleId: '1454232393451048960', permissionSet: '/rank-permissions/hicom.json' },
     { name: 'General', prefix: 'GEN', discordRoleId: '1454246002667159713', permissionSet: '/rank-permissions/hicom.json' },

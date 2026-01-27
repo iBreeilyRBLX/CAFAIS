@@ -145,7 +145,7 @@ class EndLoreEventCommand extends BaseCommand {
 
             const now = new Date();
             const durationMs = now.getTime() - new Date(event.startTime).getTime();
-            const points = calculatePoints(durationMs, eventConfig.basePerHour, eventConfig.bonusPer30Min);
+            const points = calculatePoints(durationMs, eventConfig.basePerHour, eventConfig.bonusPer30Min, eventConfig.maxPoints);
 
             // Award points to all participants using shared service
             const participantData = await awardPointsToParticipants(event.id, participants, points);
