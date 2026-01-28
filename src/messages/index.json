@@ -44,6 +44,11 @@
       "id": 9,
       "name": "Event Notifications",
       "channelId": "1454539774189764700"
+    },
+    {
+      "id": 10,
+      "name": "Tryout Notifications",
+      "channelId": "1465078759848677561"
     }
   ]
 }

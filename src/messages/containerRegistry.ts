@@ -9,6 +9,7 @@ import {
     buildEventPollsContainer,
     buildTrainingAnnouncementsContainer,
     buildEventNotificationsContainer,
+    buildTryoutNotificationsContainer,
 } from './containers';
 
 /**
@@ -25,4 +26,5 @@ export const containerRegistry: Record<number, () => ContainerBuilder> = {
     7: buildTrainingAnnouncementsContainer,
     8: buildEventPollsContainer,
     9: buildEventNotificationsContainer,
+    10: buildTryoutNotificationsContainer,
 };
