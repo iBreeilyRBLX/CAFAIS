@@ -142,3 +142,16 @@ model ApplicationSubmission {
   @@index([userDiscordId])
   @@index([isPending])
 }
+
+model TimedBan {
+  id                String      @id @default(uuid())
+  userDiscordId     String
+  guildId           String
+  banExpiresAt      DateTime
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  @@unique([userDiscordId, guildId])
+  @@index([userDiscordId])
+  @@index([guildId])
+  @@index([banExpiresAt])
+}

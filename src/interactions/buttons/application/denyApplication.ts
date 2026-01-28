@@ -35,7 +35,7 @@ const button: Button = {
             if (!member) {
                 const container = new ContainerBuilder()
                     .setAccentColor(0xE74C3C);
-                
+
                 container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## ❌ Error'));
                 container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
                 container.addTextDisplayComponents(new TextDisplayBuilder().setContent('**Issue:** Applicant not found in server.\n**Action:** User may have left the server.'));
@@ -54,26 +54,26 @@ const button: Button = {
 
             const container = new ContainerBuilder()
                 .setAccentColor(0xE74C3C);
-            
+
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## Application Denied'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            
+
             // Applicant information
             const applicantInfo = `**Applicant:** ${member.user.tag} (<@${member.user.id}>)`;
             const robloxInfo = verifiedUser ? `\n**Roblox:** ${robloxDisplayName} (@${verifiedUser.robloxUsername}) • [Profile](${robloxProfile})` : '';
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(applicantInfo + robloxInfo));
-            
+
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            
+
             // Application details
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
                 `**Application Reason**\n\`\`\`\n${application.applicationReason}\n\`\`\`\n\n` +
                 `**Found us via:** ${application.foundServer}\n` +
                 `**Age verification:** ${application.age}`,
             ));
-            
+
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            
+
             // Denial metadata
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
                 `**Denied by:** ${author.displayName}\n` +
@@ -87,37 +87,13 @@ const button: Button = {
 
             const dmContainer = new ContainerBuilder()
                 .setAccentColor(0xE74C3C);
-            
+
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent('## Application Denied'));
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            
+
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
                 `<@${applicantId}>, your application has been denied.\n\n` +
                 'You may reapply in the future after reviewing our requirements.',
-            ));
-            
-            if (verifiedUser) {
-                dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-                dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                    '**Your Accounts**\n' +
-                    `**Discord:** ${member.user.tag}\n` +
-                    `**Roblox:** ${robloxDisplayName}\n` +
-                    `[View Profile](${robloxProfile})`,
-                ));
-            }
-            
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Your Application (Submission #${application.submissionCount})**\n\n` +
-                `**Reason**\n\`\`\`\n${application.applicationReason}\n\`\`\``,
-            ));
-            
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Denied by:** ${author.displayName}\n` +
-                `**Timestamp:** ${timestamp}`,
             ));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] }).catch(() => null);

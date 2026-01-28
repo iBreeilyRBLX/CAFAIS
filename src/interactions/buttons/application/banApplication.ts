@@ -46,6 +46,9 @@ const button: Button = {
 
             const now = new Date();
             const timestamp = `<t:${Math.floor(now.getTime() / 1000)}:f>`;
+            const oneYearMs = 1000 * 60 * 60 * 24 * 365;
+            const banExpiresAt = new Date(now.getTime() + oneYearMs);
+            const banExpiresTimestamp = `<t:${Math.floor(banExpiresAt.getTime() / 1000)}:D>`;
 
             // Get verified user info for Roblox details
             const verifiedUser = await prisma.verifiedUser.findUnique({ where: { discordId: applicantId } });
@@ -55,7 +58,7 @@ const button: Button = {
             const container = new ContainerBuilder()
                 .setAccentColor(0xE74C3C);
 
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## Application Denied - User Banned'));
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## Application Denied - User Banned (1 Year)'));
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
 
             // Applicant information
@@ -65,8 +68,17 @@ const button: Button = {
 
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
 
+            // Application details
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                '**Action:** Applicant has been permanently banned from the server.',
+                `**Application Reason**\n\`\`\`\n${application.applicationReason}\n\`\`\`\n\n` +
+                `**Found us via:** ${application.foundServer}\n` +
+                `**Age verification:** ${application.age}`,
+            ));
+
+            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
+
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Action:** Applicant has been banned from the server for 1 year (until ${banExpiresTimestamp}).`,
             ));
 
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
@@ -85,36 +97,30 @@ const button: Button = {
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
 
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `<@${applicantId}>, your application was denied and you have been permanently banned from the server.\n\n` +
-                'You may appeal this decision through the appropriate channels.',
-            ));
-
-            if (verifiedUser) {
-                dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-                dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                    '**Your Accounts**\n' +
-                    `**Discord:** ${member.user.tag}\n` +
-                    `**Roblox:** ${robloxDisplayName}\n` +
-                    `[View Profile](${robloxProfile})`,
-                ));
-            }
-
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Your Application (Submission #${application.submissionCount})**\n\n` +
-                `**Reason**\n\`\`\`\n${application.applicationReason}\n\`\`\``,
-            ));
-
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Actioned by:** ${author.displayName}\n` +
-                `**Timestamp:** ${timestamp}`,
+                `<@${applicantId}>, your application was denied.\n\n` +
+                'You may appeal this decision through the appropriate channels. https://appeal.gg/casf',
             ));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] }).catch(() => null);
             await guild.bans.create(applicantId, { reason: 'Application denied during review' });
+
+            // Store timed ban in database
+            await prisma.timedBan.upsert({
+                where: {
+                    userDiscordId_guildId: {
+                        userDiscordId: applicantId,
+                        guildId: guild.id,
+                    },
+                },
+                update: {
+                    banExpiresAt: banExpiresAt,
+                },
+                create: {
+                    userDiscordId: applicantId,
+                    guildId: guild.id,
+                    banExpiresAt: banExpiresAt,
+                },
+            });
 
             // Update application with cooldown timestamp
             await prisma.applicationSubmission.update({

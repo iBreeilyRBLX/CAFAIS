@@ -234,7 +234,7 @@ const modalHandler: ModalSubmit = {
 
         const banButton = new DjsButtonBuilder()
             .setCustomId(`banApplication_${interaction.user.id}`)
-            .setLabel('Ban Permanently')
+            .setLabel('Ban 1 Year')
             .setStyle(DjsButtonStyle.Danger);
 
         // Use ActionRowBuilder<ButtonBuilder> for correct typing

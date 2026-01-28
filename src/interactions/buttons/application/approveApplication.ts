@@ -132,38 +132,6 @@ const button: Button = {
                 `**Welcome to the team, <@${applicantId}>!**\n\n` +
                 'Your application has been approved and you\'ve been promoted to **Initiate**.',
             ));
-            
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            
-            // Account information
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                '**Your Accounts**\n' +
-                `${CUSTOM_EMOJIS.discord.default} **Discord:** ${member.user.tag}\n` +
-                `${CUSTOM_EMOJIS.roblox.default} **Roblox:** ${robloxDisplayName} • [Profile](${robloxProfile})`,
-            ));
-            
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            
-            // Application details
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Your Application (Submission #${application.submissionCount})**\n\n` +
-                `**Reason for joining**\n\`\`\`\n${application.applicationReason}\n\`\`\`\n` +
-                `**Found us via:** ${application.foundServer}`,
-            ));
-            
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                '**Next Steps**\n' +
-                `Visit <#${config.channels.training}> to begin your training and learn about the group.`,
-            ));
-            
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-            
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Approved by:** ${author.displayName}\n` +
-                `**Timestamp:** ${timestamp}`,
-            ));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] });
 

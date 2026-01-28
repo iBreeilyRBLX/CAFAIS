@@ -2,6 +2,7 @@ import { Events } from 'discord.js';
 import { Event } from '../../interfaces';
 import ExtendedClient from '../../classes/Client';
 import { MessageManager } from '../../features/MessageManager';
+import { TimedBanService } from '../../services/timedBanService';
 
 const event: Event = {
     name: Events.ClientReady,
@@ -23,6 +24,10 @@ const event: Event = {
 
             // Ensure all messages exist (only sends if message was deleted)
             await messageManager.ensureAllMessages();
+
+            // Initialize timed ban service
+            const timedBanService = new TimedBanService(client);
+            timedBanService.start();
         }
         catch (error) {
             console.error('Error deploying startup messages: ', error);

@@ -65,6 +65,15 @@ const button: Button = {
 
             container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
 
+            // Application details
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                `**Application Reason**\n\`\`\`\n${application.applicationReason}\n\`\`\`\n\n` +
+                `**Found us via:** ${application.foundServer}\n` +
+                `**Age verification:** ${application.age}`,
+            ));
+
+            container.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
+
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
                 '**Action:** Applicant has been kicked from the server.',
             ));
@@ -85,32 +94,8 @@ const button: Button = {
             dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
 
             dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `<@${applicantId}>, your application was denied and you have been kicked from the server.\n\n` +
+                `<@${applicantId}>, your application was denied.\n\n` +
                 'You may reapply after some time once you meet the requirements.',
-            ));
-
-            if (verifiedUser) {
-                dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-                dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                    '**Your Accounts**\n' +
-                    `**Discord:** ${member.user.tag}\n` +
-                    `**Roblox:** ${robloxDisplayName}\n` +
-                    `[View Profile](${robloxProfile})`,
-                ));
-            }
-
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Your Application (Submission #${application.submissionCount})**\n\n` +
-                `**Reason**\n\`\`\`\n${application.applicationReason}\n\`\`\``,
-            ));
-
-            dmContainer.addSeparatorComponents(new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }));
-
-            dmContainer.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                `**Actioned by:** ${author.displayName}\n` +
-                `**Timestamp:** ${timestamp}`,
             ));
 
             await member.user.send({ flags: MessageFlags.IsComponentsV2, components: [dmContainer] }).catch(() => null);
