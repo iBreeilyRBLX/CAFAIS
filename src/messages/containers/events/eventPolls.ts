@@ -1,7 +1,7 @@
 import { ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize } from 'discord.js';
 
 /**
- * Message ID 7: Event Polls
+ * Message ID 8: Event Polls
  * Template and guidelines for deployment event polls
  */
 export const buildEventPollsContainer = (): ContainerBuilder => {

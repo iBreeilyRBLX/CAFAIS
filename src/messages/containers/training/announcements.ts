@@ -1,7 +1,7 @@
 import { ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize } from 'discord.js';
 
 /**
- * Message ID 8: Training Announcements
+ * Message ID 7: Training Announcements
  * Format for Training Officers to announce when training has started
  */
 export const buildTrainingAnnouncementsContainer = (): ContainerBuilder => {

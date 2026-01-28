@@ -34,6 +34,16 @@
       "id": 7,
       "name": "Training Announcements",
       "channelId": "1454555800822611968"
+    },
+    {
+      "id": 8,
+      "name": "Event Polls",
+      "channelId": "1454539788723028149"
+    },
+    {
+      "id": 9,
+      "name": "Event Notifications",
+      "channelId": "1454539774189764700"
     }
   ]
 }
