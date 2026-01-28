@@ -41,7 +41,7 @@ export const buildTrainingAnnouncementsContainer = (): ContainerBuilder => {
             'Squad Colour: Blue\n' +
             'Server Code: ba9dc4c8-e66b-4343-ba81-3411626e19b6\n' +
             'Notes: [Any additional information]\n\n' +
-            '@Initiate\n' +
+            '<@&1454248763915898971>\n' +
             '```',
         );
     container.addTextDisplayComponents(format);
@@ -64,20 +64,6 @@ export const buildTrainingAnnouncementsContainer = (): ContainerBuilder => {
             '<@&1454248763915898971>',
         );
     container.addTextDisplayComponents(example);
-
-    const separator4 = new SeparatorBuilder({
-        spacing: SeparatorSpacingSize.Small,
-        divider: true,
-    });
-    container.addSeparatorComponents(separator4);
-
-    const footer = new TextDisplayBuilder()
-        .setContent(
-            '**📚 Resources:**\n' +
-            '• Review training format in <#1454555758695022859>\n' +
-            '• Training document: [View Here](https://docs.google.com/document/d/16Xb03qIZy_eYVmW5_Z88jSKyPTyNleA8LrzZLBzEpas/edit?usp=sharing)',
-        );
-    container.addTextDisplayComponents(footer);
 
     return container;
 };
