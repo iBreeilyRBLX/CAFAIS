@@ -19,6 +19,21 @@
       "id": 4,
       "name": "Academy Information",
       "channelId": "1454555758695022859"
+    },
+    {
+      "id": 5,
+      "name": "Training Information",
+      "channelId": "1454564611599761639"
+    },
+        {
+      "id": 6,
+      "name": "Training Polls",
+      "channelId": "1454555912491761875"
+    },
+    {
+      "id": 7,
+      "name": "Training Announcements",
+      "channelId": "1454555800822611968"
     }
   ]
 }

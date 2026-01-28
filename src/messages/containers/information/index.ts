@@ -1,0 +1,1 @@
+export { buildHubContainer } from './hub';
