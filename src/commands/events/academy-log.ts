@@ -100,9 +100,14 @@ class AcademyLogCommand extends BaseCommand {
                 .setDescription('Training notes or observations')
                 .setRequired(false),
         )
-        .addStringOption(option =>
+        .addAttachmentOption(option =>
             option.setName('image')
-                .setDescription('Screenshot or image link')
+                .setDescription('Screenshot or image (upload a file)')
+                .setRequired(false),
+        )
+        .addStringOption(option =>
+            option.setName('imageurl')
+                .setDescription('Or provide an image URL instead of uploading')
                 .setRequired(false),
         ) as SlashCommandBuilder;
 
@@ -136,7 +141,17 @@ class AcademyLogCommand extends BaseCommand {
         const channel = voice.channel as VoiceChannel;
         const eventName = interaction.options.getString('eventname', true);
         const notes = interaction.options.getString('notes') || undefined;
-        const imageLink = interaction.options.getString('image') || undefined;
+        const imageAttachment = interaction.options.getAttachment('image');
+        const imageUrlOption = interaction.options.getString('imageurl');
+        
+        // Get image URL from either attachment or URL option
+        let imageLink: string | undefined;
+        if (imageAttachment) {
+            imageLink = imageAttachment.url;
+        }
+        else if (imageUrlOption) {
+            imageLink = imageUrlOption;
+        }
 
         // Validate inputs
         const nameValidation = validateEventName(eventName);
@@ -153,8 +168,8 @@ class AcademyLogCommand extends BaseCommand {
             }
         }
 
-        if (imageLink) {
-            const imageValidation = validateImageUrl(imageLink);
+        if (imageUrlOption) {
+            const imageValidation = validateImageUrl(imageUrlOption);
             if (!imageValidation.valid) {
                 await interaction.editReply({ content: `❌ Image URL: ${imageValidation.error}` });
                 return;
@@ -318,7 +333,7 @@ class AcademyLogCommand extends BaseCommand {
                 participants: participantInfos,
                 pointsAwarded: ACADEMY_PASS_POINTS,
                 notes,
-                imageLink,
+                imageLinks: imageLink ? [imageLink] : undefined,
                 promotedCount: successfulPromotions.length,
                 failedCount: failedInitiatesIds.size,
             };

@@ -14,6 +14,11 @@
       "id": 3,
       "name": "Main Information Hub",
       "channelId": "1454535180596285588"
+    },
+    {
+      "id": 4,
+      "name": "Academy Information",
+      "channelId": "1454555758695022859"
     }
   ]
 }

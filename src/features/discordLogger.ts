@@ -14,6 +14,7 @@ import {
     SeparatorSpacingSize,
     Client,
     MessageFlags,
+    MediaGalleryBuilder,
 } from 'discord.js';
 import { EventLogData, AcademyLogData } from '../types/events';
 import { PromotionLogData, DemotionLogData } from '../types/ranking';
@@ -108,14 +109,6 @@ async function flushPromotionLogs(client: Client): Promise<void> {
         const logsToSend = [...promotionBuffer];
         promotionBuffer.length = 0;
         promotionFlushTimer = null;
-
-        // Main title
-        const titleDisplay = new TextDisplayBuilder()
-            .setContent(
-                logsToSend.length === 1
-                    ? '# 📈 Promotion Log'
-                    : '# 📈 Batch Promotion Log',
-            );
 
         // Create main container with green accent for success (0x2ECC71)
         const container = new ContainerBuilder()
@@ -421,15 +414,19 @@ export async function logEvent(client: Client, data: EventLogData): Promise<void
             participantsContainer.addTextDisplayComponents(participantsText);
         }
 
-        // Create image container if provided (orange accent - 0xE67E22)
-        let imageContainer: ContainerBuilder | null = null;
-        if (data.imageLink) {
-            imageContainer = new ContainerBuilder()
-                .setAccentColor(0xE67E22);
+        // Create media gallery container if provided (orange accent - 0xE67E22)
+        let mediaContainer: ContainerBuilder | null = null;
+        if (data.imageLinks && data.imageLinks.length > 0) {
+            const gallery = new MediaGalleryBuilder();
+            data.imageLinks.forEach((link) => {
+                gallery.addItems(
+                    (item) => item.setURL(link),
+                );
+            });
 
-            const imageText = new TextDisplayBuilder()
-                .setContent(`## 📷 Event Media\n[View Event Image](${data.imageLink})`);
-            imageContainer.addTextDisplayComponents(imageText);
+            mediaContainer = new ContainerBuilder()
+                .setAccentColor(0xE67E22)
+                .addMediaGalleryComponents(gallery);
         }
 
         // Assemble all components
@@ -437,8 +434,8 @@ export async function logEvent(client: Client, data: EventLogData): Promise<void
         if (participantsContainer) {
             components.push(participantsContainer);
         }
-        if (imageContainer) {
-            components.push(imageContainer);
+        if (mediaContainer) {
+            components.push(mediaContainer);
         }
 
         // Send message with all containers
@@ -535,9 +532,9 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
             participantsContainer.addTextDisplayComponents(participantsText);
         }
 
-        // Create notes/image container if applicable (orange accent - 0xE67E22)
+        // Create notes/media gallery container if applicable (orange accent - 0xE67E22)
         let notesContainer: ContainerBuilder | null = null;
-        if (data.notes || data.imageLink) {
+        if (data.notes || (data.imageLinks && data.imageLinks.length > 0)) {
             notesContainer = new ContainerBuilder()
                 .setAccentColor(0xE67E22);
 
@@ -551,18 +548,21 @@ export async function logAcademyTraining(client: Client, data: AcademyLogData): 
             });
             notesContainer.addSeparatorComponents(notesSeparator);
 
-            let notesContent = '';
             if (data.notes) {
-                notesContent += `**📄 Notes:**\n${data.notes}`;
-            }
-            if (data.imageLink) {
-                if (notesContent) notesContent += '\n\n';
-                notesContent += `**📷 Event Image:** [View Image](${data.imageLink})`;
+                const notesText = new TextDisplayBuilder()
+                    .setContent(`**📄 Notes:**\n${data.notes}`);
+                notesContainer.addTextDisplayComponents(notesText);
             }
 
-            const notesText = new TextDisplayBuilder()
-                .setContent(notesContent);
-            notesContainer.addTextDisplayComponents(notesText);
+            if (data.imageLinks && data.imageLinks.length > 0) {
+                const gallery = new MediaGalleryBuilder();
+                data.imageLinks.forEach((link) => {
+                    gallery.addItems(
+                        (item) => item.setURL(link),
+                    );
+                });
+                notesContainer.addMediaGalleryComponents(gallery);
+            }
         }
 
         // Main title with academy emoji

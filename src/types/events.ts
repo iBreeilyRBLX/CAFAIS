@@ -77,7 +77,7 @@ export interface EventLogData {
     participants: ParticipantInfo[];
     pointsAwarded?: number;
     notes?: string;
-    imageLink?: string;
+    imageLinks?: string[];
 }
 
 /**

@@ -236,4 +236,235 @@ export const containerRegistry: Record<number, () => ContainerBuilder> = {
 
         return container;
     },
+    4: () => {
+        // Message ID 4: Induction Request Format
+        const container = new ContainerBuilder()
+            .setAccentColor(0xF39C12);
+
+        const title = new TextDisplayBuilder()
+            .setContent('## ⚒️ Induction Request Format');
+        container.addTextDisplayComponents(title);
+
+        const separator1 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator1);
+
+        const welcome = new TextDisplayBuilder()
+            .setContent(
+                'Hello Initiates, welcome to the Cascadian Academy. Here you will be trained by our Training Officers, who will show you the means to be a true Cascadian.',
+            );
+        container.addTextDisplayComponents(welcome);
+
+        const separator2 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator2);
+
+        const rules = new TextDisplayBuilder()
+            .setContent(
+                '## Training Rules\n' +
+                '**__To participate in training you will have to follow the following rules:__**\n\n' +
+                '1. You will use a Carbines / Assault Rifles or Battle Rifles.\n' +
+                '2. You will follow all orders given by the trainer.\n' +
+                '3. You won\'t spawn any vehicle if the trainer didn\'t give you permission.\n' +
+                '4. You will follow the trainer unless instructed otherwise.',
+            );
+        container.addTextDisplayComponents(rules);
+
+        const separator3 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator3);
+
+        const instructions = new TextDisplayBuilder()
+            .setContent(
+                '## How to Request Training\n\n' +
+                'If you want to be trained request one in <#1454556030988980446>.\n' +
+                'When a Training Officer sees the request he will post a poll in <#1454555912491761875>.\n' +
+                'When it is time for the training, it will be announced in <#1454555800822611968>.',
+            );
+        container.addTextDisplayComponents(instructions);
+
+        const separator4 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator4);
+
+        const format = new TextDisplayBuilder()
+            .setContent(
+                '## Request Format\n' +
+                '```\n' +
+                'Username: Your username in the discord server\n' +
+                'Time: (Use hammer time and copy the day/month/year/hour) EX: <t:1767524460:F>\n' +
+                'Time Frame: (Time from the requested time you expect to be available)\n' +
+                'Ping: <@&1454538513981767774>\n' +
+                '```',
+            );
+        container.addTextDisplayComponents(format);
+
+        const separator5 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator5);
+
+        const hammertime = new TextDisplayBuilder()
+            .setContent(
+                '## Get Your Time\n' +
+                '**[HAMMERTIME](https://hammertime.cyou/)**\n\n' +
+                'Use this tool to generate your timestamp.',
+            );
+        container.addTextDisplayComponents(hammertime);
+
+        const separator6 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator6);
+
+        const support = new TextDisplayBuilder()
+            .setContent(
+                'If you have any questions, ping a Training Officer in <#1454556114237784145>',
+            );
+        container.addTextDisplayComponents(support);
+
+        return container;
+    },
+    5: () => {
+        // Message ID 5: Event Polls.
+        const container = new ContainerBuilder()
+            .setAccentColor(0xF39C12);
+
+        const title = new TextDisplayBuilder()
+            .setContent('## 📢 Event Polls');
+        container.addTextDisplayComponents(title);
+        const separator1 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator1);
+
+        const description = new TextDisplayBuilder()
+            .setContent(
+                'Use this channel to notify troops of a deployment, the time it will occur, and to confirm attendance. Copy/paste the template and fill every line.\n\n' +
+                '**⚠️ Notice:** Some events require specific ranks or certifications. Verify eligibility before affirming attendance.\n\n' +
+                '## 📝 Deployment Template (Copy/Paste)\n' +
+                '```\n' +
+                '[DEPLOYMENT CATEGORY]: Combat Patrol | Roleplay | Story\n' +
+                '\n' +
+                '[MISSION IMPORTANCE]: Low | Medium | High | Critical\n' +
+                '[DEPLOYMENT LEAD]: (@Mention)\n' +
+
+                '[OPERATION]: Operation Name\n' +
+                '[EVENT TIME]:(USE HAMMERTIME)\n' +
+                '[MINIMUM ATTENDANCE]: #\n' +
+                '[DEPLOYMENT DETAILS]: Brief overvieinw + objectives\n' +
+                '[REQUIRED RANK/CERTS]: None / List here\n' +
+                '[SPECIFICATIONS]: PTS WILL BE ENABLED.\n' +
+                '```\n\n' +
+                '⏱️ **Hammertime:** https://hammertime.cyou/',
+            );
+        container.addTextDisplayComponents(description);
+
+        return container;
+    },
+    6: () => {
+        // Message ID 6: Training Information
+        const container = new ContainerBuilder()
+            .setAccentColor(0xE67E22);
+
+        const title = new TextDisplayBuilder()
+            .setContent('## 🛡️ Training Department');
+        container.addTextDisplayComponents(title);
+
+        const separator1 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator1);
+
+        const overview = new TextDisplayBuilder()
+            .setContent(
+                '## Department Overview\n' +
+                'The Training Department is responsible for training new Initiates to allow them to enter the Cascadian Armed Forces. You will be responsible in managing trainings, in which you will show the basics to the trainee. This is a skill test - if they don\'t pass, we will have to redo the training.',
+            );
+        container.addTextDisplayComponents(overview);
+
+        const separator2 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator2);
+
+        const responsibilities = new TextDisplayBuilder()
+            .setContent(
+                '## Training Officer Responsibilities\n' +
+                '• Use **Hammertime** to indicate the correct time for trainings in <#1454555912491761875>\n' +
+                '• Monitor induction requests in <#1454556030988980446>\n' +
+                '• Ensure trainees use Hammertime for scheduling\n' +
+                '• Follow the Training Document guidelines:\n' +
+                '  - **Orange underlined text** = Instructions for Training Officers\n' +
+                '  - **Yellow underlined text** = What to say to Trainees\n' +
+                '• Report any document errors to <@471739867332739092>',
+            );
+        container.addTextDisplayComponents(responsibilities);
+
+        const separator3 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator3);
+
+        const leadership = new TextDisplayBuilder()
+            .setContent(
+                '## Chain of Command\n' +
+                '**[Training Academy Chief]** <@471739867332739092>\n\n' +
+                '```\nCHAIN OF COMMAND\n\nN/A\n```',
+            );
+        container.addTextDisplayComponents(leadership);
+
+        const separator4 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator4);
+
+        const resources = new TextDisplayBuilder()
+            .setContent(
+                '## Training Resources\n' +
+                '**Training Private Server Code:**\n' +
+                '```\nba9dc4c8-e66b-4343-ba81-3411626e19b6\n```',
+            );
+        container.addTextDisplayComponents(resources);
+
+        const separator5 = new SeparatorBuilder({
+            spacing: SeparatorSpacingSize.Small,
+            divider: true,
+        });
+        container.addSeparatorComponents(separator5);
+
+        const buttonRow = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setLabel('Training Document')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL('https://docs.google.com/document/d/16Xb03qIZy_eYVmW5_Z88jSKyPTyNleA8LrzZLBzEpas/edit?usp=sharing')
+                    .setEmoji('📄'),
+            )
+            .addComponents(
+                new ButtonBuilder()
+                    .setLabel('Hammertime')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL('https://hammertime.cyou/')
+                    .setEmoji('⏱️'),
+            );
+        container.addActionRowComponents(buttonRow);
+
+        return container;
+    }
 };

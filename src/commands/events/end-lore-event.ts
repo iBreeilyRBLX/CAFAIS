@@ -49,9 +49,14 @@ class EndLoreEventCommand extends BaseCommand {
                 .setDescription('Event notes or observations')
                 .setRequired(false),
         )
-        .addStringOption(option =>
+        .addAttachmentOption(option =>
             option.setName('image')
-                .setDescription('Event screenshot or image URL')
+                .setDescription('Event screenshot or image (upload a file)')
+                .setRequired(false),
+        )
+        .addStringOption(option =>
+            option.setName('imageurl')
+                .setDescription('Or provide an image URL instead of uploading')
                 .setRequired(false),
         ) as SlashCommandBuilder;
 
@@ -73,7 +78,17 @@ class EndLoreEventCommand extends BaseCommand {
         }
 
         const notes = interaction.options.getString('notes') || undefined;
-        const imageLink = interaction.options.getString('image') || undefined;
+        const imageAttachment = interaction.options.getAttachment('image');
+        const imageUrlOption = interaction.options.getString('imageurl');
+
+        // Get image URL from either attachment or URL option
+        let imageLink: string | undefined;
+        if (imageAttachment) {
+            imageLink = imageAttachment.url;
+        }
+        else if (imageUrlOption) {
+            imageLink = imageUrlOption;
+        }
 
         // Validate inputs
         if (notes) {
@@ -84,8 +99,8 @@ class EndLoreEventCommand extends BaseCommand {
             }
         }
 
-        if (imageLink) {
-            const imageValidation = validateImageUrl(imageLink);
+        if (imageUrlOption) {
+            const imageValidation = validateImageUrl(imageUrlOption);
             if (!imageValidation.valid) {
                 await interaction.editReply({ content: `❌ Image URL: ${imageValidation.error}` });
                 return;
@@ -170,7 +185,7 @@ class EndLoreEventCommand extends BaseCommand {
                 participants: participantInfos,
                 pointsAwarded: points,
                 notes,
-                imageLink,
+                imageLinks: imageLink ? [imageLink] : undefined,
             };
 
             await logEvent(client, logData);
