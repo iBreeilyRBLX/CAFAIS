@@ -30,12 +30,12 @@ export const buildEventNotificationsContainer = (): ContainerBuilder => {
             '[CO-HOST] (If Any)\n' +
             '\n' +
             '[EVENT DETAILS]\n' +
-            '[VOICE CHANNEL] <#ChannelID>\n' +
             '[SQUAD COLOR]\n' +
             '[RADIO FREQUENCY] #000\n' +
             '[EVENT LINK]\n' +
             '\n' +
-            '[SERVER CODE]' +
+            '[SERVER CODE]\n' +
+            '<@&1454533624379605096>\n' +
             '```',
         );
     container.addTextDisplayComponents(description);

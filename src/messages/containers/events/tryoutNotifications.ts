@@ -1,4 +1,4 @@
-import { ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize } from 'discord.js';
 
 /**
  * Message ID 10: Tryout Notifications
@@ -21,7 +21,7 @@ export const buildTryoutNotificationsContainer = (): ContainerBuilder => {
     const description = new TextDisplayBuilder()
         .setContent(
             'Use this channel to notify troops of upcoming tryouts, provide essential details, and confirm participation. Copy/paste the template and fill every line.\n\n' +
-            '**⚠️ Notice:** Some tryouts may require specific ranks or certifications. Verify eligibility before confirming participation.\n\n' +
+            '**⚠️ Notice:** Some tryouts may require specific ranks. Verify eligibility before confirming participation.\n\n' +
             '## 📝 Tryout Notification Template (Copy/Paste)\n' +
             '```\n' +
             '# TRYOUT NAME HERE\n' +
@@ -39,19 +39,11 @@ export const buildTryoutNotificationsContainer = (): ContainerBuilder => {
             '[EVENT LINK]\n' +
             '\n' +
             '[SERVER CODE]\n' +
+            '<@&1454533624379605096>\n' +
             '```',
         );
     container.addTextDisplayComponents(description);
 
-    const buttonRow = new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-            new ButtonBuilder()
-                .setLabel('Hammertime')
-                .setStyle(ButtonStyle.Link)
-                .setURL('https://hammertime.cyou/')
-                .setEmoji('⏱️'),
-        );
-    container.addActionRowComponents(buttonRow);
 
     return container;
 };

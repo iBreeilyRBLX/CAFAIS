@@ -1,4 +1,4 @@
-import { ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize } from 'discord.js';
 
 /**
  * Message ID 8: Event Polls
@@ -31,25 +31,16 @@ export const buildEventPollsContainer = (): ContainerBuilder => {
             '\n' +
             '[STRICTNESS]\n' +
             '[EVENT DETAILS]\n' +
-            '[EVENT TIME] (Use hammertime)\n' +
             '[MINIMUM ATTENDANCE]\n' +
             '[RANK REQUIRED]\n' +
             '[EVENT LINK]\n' +
             '\n' +
-            '[NOTES]' +
+            '[NOTES]\n' +
+            '<@&1454533624379605096>\n' +
             '```',
         );
     container.addTextDisplayComponents(description);
 
-    const buttonRow = new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-            new ButtonBuilder()
-                .setLabel('Hammertime')
-                .setStyle(ButtonStyle.Link)
-                .setURL('https://hammertime.cyou/')
-                .setEmoji('⏱️'),
-        );
-    container.addActionRowComponents(buttonRow);
 
     return container;
 };

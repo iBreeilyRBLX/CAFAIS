@@ -232,12 +232,16 @@ class ProfileCommand extends BaseCommand {
         // Calculate event statistics
         const eventsAttended = profile.eventParticipants.filter(p => !p.failed);
         const eventsFailed = profile.eventParticipants.filter(p => p.failed);
-        const eventsHosted = await prisma.event.count({
+        // Fetch events hosted by the user (last 5)
+        const hostedEvents = await prisma.event.findMany({
             where: { eventHostDiscordId: targetDiscordId },
+            orderBy: { startTime: 'desc' },
+            take: 5,
         });
+        const eventsHosted = hostedEvents.length;
 
-        // Get recent events (last 5)
-        const recentEvents = profile.eventParticipants.slice(0, 5);
+        // Get recent attended events (last 5)
+        const recentAttendedEvents = eventsAttended.slice(0, 5);
 
         // Build container with accent color (Blue for profiles)
         const container = new ContainerBuilder()
@@ -320,24 +324,37 @@ class ProfileCommand extends BaseCommand {
             ),
         );
 
-        // Recent Events
-        if (recentEvents.length > 0) {
+        // Recent Events Attended
+        if (recentAttendedEvents.length > 0) {
             container.addSeparatorComponents(
                 new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }),
             );
-
             container.addTextDisplayComponents(
-                new TextDisplayBuilder().setContent('## Recent Events'),
+                new TextDisplayBuilder().setContent('## Recent Events Attended'),
             );
-
-            const eventList = recentEvents.map(p => {
-                const status = p.failed ? 'FAILED' : 'ATTENDED';
+            const attendedList = recentAttendedEvents.map(p => {
                 const points = p.points > 0 ? ` (+${p.points} pts)` : '';
-                return `**${p.event.name}** - <t:${Math.floor(p.event.startTime.getTime() / 1000)}:d>${points} [${status}]`;
+                return `**${p.event.name}** - <t:${Math.floor(p.event.startTime.getTime() / 1000)}:d>${points}`;
             }).join('\n');
-
             container.addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(eventList),
+                new TextDisplayBuilder().setContent(attendedList),
+            );
+        }
+
+        // Recent Events Hosted
+        if (hostedEvents.length > 0) {
+            container.addSeparatorComponents(
+                new SeparatorBuilder({ spacing: SeparatorSpacingSize.Small, divider: true }),
+            );
+            container.addTextDisplayComponents(
+                new TextDisplayBuilder().setContent('## Recent Events Hosted'),
+            );
+            const hostedList = hostedEvents.map(e => {
+                const points = e.pointsAwarded ? ` (+${e.pointsAwarded} pts)` : '';
+                return `**${e.name}** - <t:${Math.floor(e.startTime.getTime() / 1000)}:d>${points}`;
+            }).join('\n');
+            container.addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(hostedList),
             );
         }
 
